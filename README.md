@@ -15,7 +15,7 @@ A command-center style web app to track placement preparation progress at IIT Ka
 - HTML5
 - CSS3 (custom design tokens, responsive layout)
 - Vanilla JavaScript
-
+ 
 ## Usage
 
 Open `index.html` directly in any browser — no setup or server required.
