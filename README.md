@@ -1,7 +1,7 @@
  
 # Placement Tracker
 
-A command-center style web app to track placement preparation progress at IIT Kanpur.
+A command-center style web app to track placement preparation progress .
 
 ## Features
 
