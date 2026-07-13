@@ -62,6 +62,10 @@ export const translations = {
   installApp: { en: "Install BhadeBook for offline use", mr: "ऑफलाइन वापरासाठी BhadeBook इंस्टॉल करा" },
   install: { en: "Install", mr: "इंस्टॉल करा" },
   dismiss: { en: "Dismiss", mr: "बंद करा" },
+  sendReceipt: { en: "Send Receipt", mr: "पावती पाठवा" },
+  sendReminder: { en: "Send Reminder", mr: "स्मरणपत्र पाठवा" },
+  noPhoneOnFile: { en: "No phone number on file", mr: "फोन नंबर नोंदवलेला नाही" },
+  done: { en: "Done", mr: "पूर्ण झाले" },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {

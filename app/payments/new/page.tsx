@@ -10,7 +10,20 @@ import {
 } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { FormField, inputClass } from "@/app/components/FormField";
+import {
+  buildReceiptMessage,
+  buildWhatsAppUrl,
+  getOrAskLandlordName,
+} from "@/lib/whatsapp";
 import type { PaymentMode, ShopWithStatus } from "@/lib/types";
+
+interface SavedPayment {
+  shopId: number;
+  shopName: string;
+  tenantPhone?: string;
+  amount: number;
+  month: string;
+}
 
 function todayInputValue(): string {
   const d = new Date();
@@ -29,7 +42,7 @@ export default function AddPaymentPage() {
 }
 
 function AddPaymentForm() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedShopId = searchParams.get("shopId");
@@ -45,6 +58,7 @@ function AddPaymentForm() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savedPayment, setSavedPayment] = useState<SavedPayment | null>(null);
 
   useEffect(() => {
     getShopsWithCurrentStatus().then(setShops);
@@ -81,16 +95,76 @@ function AddPaymentForm() {
   async function handleSave() {
     if (!selectedShop?.tenant || !canSave) return;
     setSaving(true);
+    const month = currentMonth();
     await recordPayment({
       shopId: selectedShop.id!,
       tenantId: selectedShop.tenant.id!,
       amount: Number(amount),
-      dueMonth: currentMonth(),
+      dueMonth: month,
       datePaid: new Date(date),
       paymentMode: mode,
       notes: notes.trim() || undefined,
     });
-    router.push(`/shops?paymentSaved=${selectedShop.id}`);
+    setSavedPayment({
+      shopId: selectedShop.id!,
+      shopName: selectedShop.name,
+      tenantPhone: selectedShop.tenant.phone,
+      amount: Number(amount),
+      month,
+    });
+  }
+
+  function handleSendReceipt() {
+    if (!savedPayment?.tenantPhone) return;
+    const landlordName = getOrAskLandlordName(language);
+    const message = buildReceiptMessage({
+      amount: savedPayment.amount,
+      shopName: savedPayment.shopName,
+      month: savedPayment.month,
+      landlordName,
+      language,
+    });
+    window.open(buildWhatsAppUrl(savedPayment.tenantPhone, message), "_blank");
+  }
+
+  function handleDone() {
+    if (!savedPayment) return;
+    router.push(`/shops?paymentSaved=${savedPayment.shopId}`);
+  }
+
+  // Step 3: payment recorded — offer to send a WhatsApp receipt before leaving.
+  if (savedPayment) {
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-black/[.08] p-6 text-center dark:border-white/[.12]">
+          <span className="text-3xl">✓</span>
+          <p className="text-base font-semibold">{t("paymentRecorded")}</p>
+          <p className="text-sm opacity-60">
+            {savedPayment.shopName} · ₹{savedPayment.amount.toLocaleString("en-IN")}
+          </p>
+        </div>
+
+        {savedPayment.tenantPhone ? (
+          <button
+            type="button"
+            onClick={handleSendReceipt}
+            className="flex h-14 items-center justify-center gap-2 rounded-lg border border-green-600/30 bg-green-600/10 text-base font-semibold text-green-700 dark:text-green-400"
+          >
+            💬 {t("sendReceipt")}
+          </button>
+        ) : (
+          <p className="text-center text-sm opacity-50">{t("noPhoneOnFile")}</p>
+        )}
+
+        <button
+          type="button"
+          onClick={handleDone}
+          className="h-14 rounded-lg bg-[var(--foreground)] text-base font-semibold text-[var(--background)]"
+        >
+          {t("done")}
+        </button>
+      </div>
+    );
   }
 
   // Step 1: pick a shop (skipped when arriving pre-selected from a shop row).

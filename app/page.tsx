@@ -2,12 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getShopsWithCurrentStatus } from "@/lib/db";
+import { currentMonth, getShopsWithCurrentStatus } from "@/lib/db";
 import { seedIfEmpty } from "@/lib/seed";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
+import {
+  buildReminderMessage,
+  buildWhatsAppUrl,
+  getOrAskLandlordName,
+} from "@/lib/whatsapp";
 import type { PaymentStatus, ShopWithStatus } from "@/lib/types";
-import type { TranslationKey } from "@/lib/translations";
+import type { Language, TranslationKey } from "@/lib/translations";
 
 type ViewMode = "month" | "all";
 type T = (key: TranslationKey) => string;
@@ -19,7 +24,7 @@ const STATUS_PRIORITY: Record<PaymentStatus, number> = {
 };
 
 export default function Home() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
 
@@ -99,7 +104,7 @@ export default function Home() {
       ) : (
         <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
           {listShops.map((shop) => (
-            <ShopRow key={shop.id} shop={shop} t={t} />
+            <ShopRow key={shop.id} shop={shop} t={t} language={language} />
           ))}
         </ul>
       )}
@@ -194,26 +199,59 @@ function ViewToggle({
   );
 }
 
-function ShopRow({ shop, t }: { shop: ShopWithStatus; t: T }) {
+function ShopRow({
+  shop,
+  t,
+  language,
+}: {
+  shop: ShopWithStatus;
+  t: T;
+  language: Language;
+}) {
   const href = shop.tenant
     ? `/payments/new?shopId=${shop.id}`
     : `/shops/${shop.id}`;
 
+  const showReminder = shop.tenant && shop.status !== "paid" && shop.tenant.phone;
+
+  function handleSendReminder() {
+    if (!shop.tenant?.phone) return;
+    const landlordName = getOrAskLandlordName(language);
+    const amountDue = Math.max(0, shop.monthlyRent - shop.collected);
+    const message = buildReminderMessage({
+      tenantName: shop.tenant.name,
+      amountDue,
+      shopName: shop.name,
+      month: currentMonth(),
+      landlordName,
+      language,
+    });
+    window.open(buildWhatsAppUrl(shop.tenant.phone, message), "_blank");
+  }
+
   return (
-    <li>
+    <li className="flex min-h-[56px] items-center gap-2 py-2 pl-4 pr-3">
       <Link
         href={href}
-        className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3 active:bg-black/[.03] dark:active:bg-white/[.05]"
+        className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 rounded-md py-1 active:bg-black/[.03] dark:active:bg-white/[.05]"
       >
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-base font-medium">{shop.name}</span>
-          <span className="truncate text-sm opacity-60">
-            {shop.tenant ? shop.tenant.name : t("vacant")}
-            {shop.tenant?.type === "family" ? ` · ${t("family")}` : ""}
-          </span>
-        </div>
-        <StatusPill shop={shop} />
+        <span className="truncate text-base font-medium">{shop.name}</span>
+        <span className="truncate text-sm opacity-60">
+          {shop.tenant ? shop.tenant.name : t("vacant")}
+          {shop.tenant?.type === "family" ? ` · ${t("family")}` : ""}
+        </span>
       </Link>
+      <StatusPill shop={shop} />
+      {showReminder && (
+        <button
+          type="button"
+          onClick={handleSendReminder}
+          aria-label={t("sendReminder")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+        >
+          💬
+        </button>
+      )}
     </li>
   );
 }
