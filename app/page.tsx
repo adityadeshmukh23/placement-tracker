@@ -1,0 +1,235 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { getShopsWithCurrentStatus } from "@/lib/db";
+import { seedIfEmpty } from "@/lib/seed";
+import { useTranslation } from "@/lib/useTranslation";
+import { StatusPill } from "@/app/components/StatusPill";
+import type { PaymentStatus, ShopWithStatus } from "@/lib/types";
+import type { TranslationKey } from "@/lib/translations";
+
+type ViewMode = "month" | "all";
+type T = (key: TranslationKey) => string;
+
+const STATUS_PRIORITY: Record<PaymentStatus, number> = {
+  unpaid: 0,
+  partial: 1,
+  paid: 2,
+};
+
+export default function Home() {
+  const { t } = useTranslation();
+  const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+
+  useEffect(() => {
+    (async () => {
+      await seedIfEmpty();
+      setShops(await getShopsWithCurrentStatus());
+    })();
+  }, []);
+
+  const occupied = useMemo(
+    () => (shops ?? []).filter((s) => s.tenant !== null),
+    [shops]
+  );
+  const vacant = useMemo(
+    () => (shops ?? []).filter((s) => s.tenant === null),
+    [shops]
+  );
+
+  const summary = useMemo(() => {
+    const totalDue = occupied.reduce((sum, s) => sum + s.monthlyRent, 0);
+    const totalCollected = occupied.reduce((sum, s) => sum + s.collected, 0);
+    const paidCount = occupied.filter((s) => s.status === "paid").length;
+    return {
+      totalCollected,
+      totalPending: totalDue - totalCollected,
+      paidCount,
+      unpaidCount: occupied.length - paidCount,
+    };
+  }, [occupied]);
+
+  const listShops = useMemo(() => {
+    if (viewMode === "all") {
+      return [...(shops ?? [])].sort(
+        (a, b) => a.area.localeCompare(b.area) || a.name.localeCompare(b.name)
+      );
+    }
+    return [
+      ...[...occupied].sort(
+        (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]
+      ),
+      ...vacant,
+    ];
+  }, [shops, viewMode, occupied, vacant]);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <SummaryCard
+        totalCollected={summary.totalCollected}
+        totalPending={summary.totalPending}
+        paidCount={summary.paidCount}
+        unpaidCount={summary.unpaidCount}
+        loading={shops === null}
+        t={t}
+      />
+
+      <div className="flex items-center gap-2">
+        <ViewToggle mode={viewMode} onChange={setViewMode} t={t} />
+        <Link
+          href="/shops"
+          aria-label={t("search")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-lg dark:border-white/[.15]"
+        >
+          🔍
+        </Link>
+        <Link
+          href="/reports"
+          aria-label={t("reports")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-lg dark:border-white/[.15]"
+        >
+          📊
+        </Link>
+      </div>
+
+      {shops === null ? (
+        <ListSkeleton />
+      ) : (
+        <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
+          {listShops.map((shop) => (
+            <ShopRow key={shop.id} shop={shop} t={t} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SummaryCard({
+  totalCollected,
+  totalPending,
+  paidCount,
+  unpaidCount,
+  loading,
+  t,
+}: {
+  totalCollected: number;
+  totalPending: number;
+  paidCount: number;
+  unpaidCount: number;
+  loading: boolean;
+  t: T;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
+      <p className="mb-3 text-sm font-medium opacity-60">{t("thisMonth")}</p>
+      {loading ? (
+        <div className="flex flex-col gap-3">
+          <div className="h-9 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+          <div className="h-9 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide opacity-50">
+                {t("totalCollected")}
+              </p>
+              <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                ₹{totalCollected.toLocaleString("en-IN")}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide opacity-50">
+                {t("totalPending")}
+              </p>
+              <p className="text-3xl font-bold text-red-600 dark:text-red-400">
+                ₹{totalPending.toLocaleString("en-IN")}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-4 border-t border-black/[.06] pt-4 text-sm dark:border-white/[.08]">
+            <span className="font-semibold text-green-700 dark:text-green-400">
+              {paidCount} {t("paid")}
+            </span>
+            <span className="opacity-30">|</span>
+            <span className="font-semibold text-red-700 dark:text-red-400">
+              {unpaidCount} {t("unpaid")}
+            </span>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ViewToggle({
+  mode,
+  onChange,
+  t,
+}: {
+  mode: ViewMode;
+  onChange: (mode: ViewMode) => void;
+  t: T;
+}) {
+  return (
+    <div className="flex flex-1 rounded-lg border border-black/[.12] p-1 dark:border-white/[.15]">
+      {(["month", "all"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onChange(m)}
+          className={`h-9 flex-1 rounded-md text-sm font-medium ${
+            mode === m
+              ? "bg-[var(--foreground)] text-[var(--background)]"
+              : "opacity-60"
+          }`}
+        >
+          {m === "month" ? t("thisMonth") : t("allShops")}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ShopRow({ shop, t }: { shop: ShopWithStatus; t: T }) {
+  const href = shop.tenant
+    ? `/payments/new?shopId=${shop.id}`
+    : `/shops/${shop.id}`;
+
+  return (
+    <li>
+      <Link
+        href={href}
+        className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3 active:bg-black/[.03] dark:active:bg-white/[.05]"
+      >
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-base font-medium">{shop.name}</span>
+          <span className="truncate text-sm opacity-60">
+            {shop.tenant ? shop.tenant.name : t("vacant")}
+            {shop.tenant?.type === "family" ? ` · ${t("family")}` : ""}
+          </span>
+        </div>
+        <StatusPill shop={shop} />
+      </Link>
+    </li>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <div className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex min-h-[56px] items-center gap-3 px-4 py-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="h-4 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+            <div className="h-3 w-20 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+          </div>
+          <div className="h-5 w-14 shrink-0 animate-pulse rounded-full bg-black/[.06] dark:bg-white/[.08]" />
+        </div>
+      ))}
+    </div>
+  );
+}
