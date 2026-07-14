@@ -97,6 +97,36 @@ export const translations = {
   syncError: { en: "Sync failed", mr: "सिंक अयशस्वी" },
   syncNow: { en: "Sync now", mr: "आता सिंक करा" },
   close: { en: "Close", mr: "बंद करा" },
+  sendReminders: { en: "Send Reminders", mr: "स्मरणपत्रे पाठवा" },
+  regularTenantsPending: { en: "Regular tenants pending", mr: "नियमित भाडेकरू प्रलंबित" },
+  familyTenantsPending: { en: "Family tenants pending", mr: "कुटुंब भाडेकरू प्रलंबित" },
+  selectAll: { en: "Select all", mr: "सर्व निवडा" },
+  sentNext: { en: "Sent — Next", mr: "पाठवले — पुढे" },
+  stop: { en: "Stop", mr: "थांबवा" },
+  openWhatsApp: { en: "Open WhatsApp", mr: "WhatsApp उघडा" },
+  remindersDone: { en: "All done!", mr: "सर्व झाले!" },
+  noPendingReminders: {
+    en: "No pending shops to remind this month",
+    mr: "या महिन्यात स्मरणपत्र देण्यासाठी कोणतेही प्रलंबित दुकान नाही",
+  },
+  call: { en: "Call", mr: "कॉल करा" },
+  share: { en: "Share", mr: "शेअर करा" },
+  undo: { en: "Undo", mr: "पूर्ववत करा" },
+  alreadyPaidThisMonth: { en: "Already paid this month", mr: "या महिन्यात आधीच भरले आहे" },
+  recordAnyway: { en: "Record Anyway", mr: "तरीही नोंदवा" },
+  recordingAnywayConfirmed: {
+    en: "Recording an additional payment",
+    mr: "अतिरिक्त पेमेंट नोंदवत आहे",
+  },
+  removeThisPayment: {
+    en: "Remove this month's payment",
+    mr: "या महिन्याचे पेमेंट काढा",
+  },
+  editMonthlyRent: { en: "Edit Monthly Rent", mr: "मासिक भाडे संपादित करा" },
+  shopRent: { en: "Shop Rent", mr: "दुकान भाडे" },
+  familyRent: { en: "Family Rent", mr: "कुटुंब भाडे" },
+  recordPayment: { en: "Record a Payment", mr: "पेमेंट नोंदवा" },
+  addNewShop: { en: "Add New Shop", mr: "नवीन दुकान जोडा" },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {

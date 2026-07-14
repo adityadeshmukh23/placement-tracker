@@ -1,21 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   currentMonth,
   getAvailableYears,
-  getMonthlySummary,
   getShopsWithCurrentStatus,
   getYearlyCollectionSummary,
 } from "@/lib/db";
 import { downloadCsv } from "@/lib/csv";
 import { useTranslation } from "@/lib/useTranslation";
-import type {
-  MonthlyCollected,
-  MonthlySummary,
-  ShopWithStatus,
-} from "@/lib/types";
+import { RentScopeToggle } from "@/app/components/RentScopeToggle";
+import { BackButton } from "@/app/components/BackButton";
+import type { MonthlyCollected, ShopWithStatus, TenantType } from "@/lib/types";
 import type { TranslationKey } from "@/lib/translations";
 
 type ReportTab = "monthly" | "yearly";
@@ -23,20 +19,17 @@ type T = (key: TranslationKey) => string;
 
 export default function ReportsPage() {
   const { t } = useTranslation();
-  const router = useRouter();
   const [tab, setTab] = useState<ReportTab>("monthly");
+  // Shared across both tabs — switching Monthly/Yearly keeps the same scope.
+  const [scope, setScope] = useState<TenantType>("regular");
 
   return (
     <div className="flex flex-col gap-5">
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="flex h-11 w-fit items-center text-base opacity-70"
-      >
-        ← {t("back")}
-      </button>
+      <BackButton fallbackHref="/" />
 
       <h2 className="text-xl font-semibold">{t("reports")}</h2>
+
+      <RentScopeToggle scope={scope} onChange={setScope} />
 
       <div className="flex rounded-lg border border-black/[.12] p-1 dark:border-white/[.15]">
         {(["monthly", "yearly"] as const).map((tb) => (
@@ -55,39 +48,42 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {tab === "monthly" ? <MonthlyReport t={t} /> : <YearlyReport t={t} />}
+      {tab === "monthly" ? (
+        <MonthlyReport t={t} scope={scope} />
+      ) : (
+        <YearlyReport t={t} scope={scope} />
+      )}
     </div>
   );
 }
 
-function MonthlyReport({ t }: { t: T }) {
+function MonthlyReport({ t, scope }: { t: T; scope: TenantType }) {
   const [month, setMonth] = useState(currentMonth());
-  const [summary, setSummary] = useState<MonthlySummary | null>(null);
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
 
   useEffect(() => {
-    setSummary(null);
     setShops(null);
-    Promise.all([getMonthlySummary(month), getShopsWithCurrentStatus(month)]).then(
-      ([s, sh]) => {
-        setSummary(s);
-        setShops(sh);
-      }
-    );
+    getShopsWithCurrentStatus(month).then(setShops);
   }, [month]);
 
   const occupiedShops = useMemo(
     () =>
       (shops ?? [])
-        .filter((s) => s.tenant !== null)
+        .filter((s) => s.tenant !== null && s.tenant.type === scope)
         .sort(
           (a, b) => a.area.localeCompare(b.area) || a.name.localeCompare(b.name)
         ),
-    [shops]
+    [shops, scope]
   );
 
+  const summary = useMemo(() => {
+    const totalDue = occupiedShops.reduce((sum, s) => sum + s.monthlyRent, 0);
+    const totalCollected = occupiedShops.reduce((sum, s) => sum + s.collected, 0);
+    return { totalCollected, totalPending: totalDue - totalCollected };
+  }, [occupiedShops]);
+
   function handleExport() {
-    if (!summary) return;
+    if (shops === null) return;
     const rows: (string | number)[][] = [
       [t("shop"), t("area"), t("rent"), t("collected"), t("pending")],
       ...occupiedShops.map((s) => [
@@ -116,14 +112,14 @@ function MonthlyReport({ t }: { t: T }) {
         <button
           type="button"
           onClick={handleExport}
-          disabled={!summary}
+          disabled={shops === null}
           className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)] disabled:opacity-40"
         >
           {t("export")}
         </button>
       </div>
 
-      {summary ? (
+      {shops !== null ? (
         <div className="grid grid-cols-2 gap-4 rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
           <div>
             <p className="text-sm uppercase tracking-wide opacity-50">
@@ -185,7 +181,7 @@ function MonthlyReport({ t }: { t: T }) {
   );
 }
 
-function YearlyReport({ t }: { t: T }) {
+function YearlyReport({ t, scope }: { t: T; scope: TenantType }) {
   const { language } = useTranslation();
   const [years, setYears] = useState<string[]>([]);
   const [year, setYear] = useState<string | null>(null);
@@ -201,8 +197,8 @@ function YearlyReport({ t }: { t: T }) {
   useEffect(() => {
     if (!year) return;
     setMonthly(null);
-    getYearlyCollectionSummary(year).then(setMonthly);
-  }, [year]);
+    getYearlyCollectionSummary(year, scope).then(setMonthly);
+  }, [year, scope]);
 
   const total = useMemo(
     () => (monthly ?? []).reduce((sum, m) => sum + m.collected, 0),

@@ -1,17 +1,42 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  currentMonth,
+  deletePayment,
   getShopsWithCurrentStatus,
   getUsualAmount,
+  isShopFullyPaid,
   recordPayment,
 } from "@/lib/db";
 import { SYNCED_EVENT } from "@/lib/sync";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
-import type { ShopWithStatus } from "@/lib/types";
+import { ConfirmDialog } from "@/app/components/ConfirmDialog";
+import { BackButton } from "@/app/components/BackButton";
+import { deletePaymentMessage } from "@/lib/confirmMessages";
+import type { Payment, ShopWithStatus } from "@/lib/types";
+
+function formatMonthLabel(month: string, locale: string): string {
+  const [year, monthNum] = month.split("-").map(Number);
+  return new Date(year, monthNum - 1, 1).toLocaleDateString(locale, {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/**
+ * "quickMarked" is undo-able (a few seconds' safety window after the one-tap
+ * mark-as-paid shortcut, since accidental taps are the concern there).
+ * "paymentSaved" (from the full Add Payment form) and "alreadyPaid" are plain
+ * confirmations with no undo.
+ */
+type Toast =
+  | { kind: "quickMarked"; shopName: string; paymentId: string }
+  | { kind: "paymentSaved"; shopName: string }
+  | { kind: "alreadyPaid"; shopName: string };
 
 export default function ShopsPage() {
   return (
@@ -22,13 +47,22 @@ export default function ShopsPage() {
 }
 
 function ShopsList() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
   const [query, setQuery] = useState("");
   const [markingId, setMarkingId] = useState<string | null>(null);
-  const [toastShopName, setToastShopName] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pendingUndo, setPendingUndo] = useState<Payment | null>(null);
+  const [undoBusy, setUndoBusy] = useState(false);
+
+  function showToast(next: Toast, durationMs: number) {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast(next);
+    toastTimeoutRef.current = setTimeout(() => setToast(null), durationMs);
+  }
 
   useEffect(() => {
     const refresh = () => getShopsWithCurrentStatus().then(setShops);
@@ -42,18 +76,27 @@ function ShopsList() {
     if (!paymentSaved || !shops) return;
     const shop = shops.find((s) => s.id === paymentSaved);
     if (!shop) return;
-    setToastShopName(shop.name);
+    showToast({ kind: "paymentSaved", shopName: shop.name }, 3000);
     router.replace("/shops");
-    const timeout = setTimeout(() => setToastShopName(null), 3000);
-    return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, shops]);
 
   async function handleMarkAsPaid(shop: ShopWithStatus) {
     if (!shop.tenant || markingId !== null) return;
     setMarkingId(shop.id);
+
+    // Re-check fresh (not the possibly-stale `shop` in this closure) so a
+    // stray double-tap or a change that just synced in can't create a
+    // duplicate payment for a month that's already fully paid.
+    if (await isShopFullyPaid(shop.id)) {
+      setShops(await getShopsWithCurrentStatus());
+      showToast({ kind: "alreadyPaid", shopName: shop.name }, 3000);
+      setMarkingId(null);
+      return;
+    }
+
     const amount = await getUsualAmount(shop.id);
-    await recordPayment({
+    const paymentId = await recordPayment({
       shopId: shop.id,
       tenantId: shop.tenant.id,
       amount,
@@ -61,9 +104,25 @@ function ShopsList() {
       paymentMode: "cash",
     });
     setShops(await getShopsWithCurrentStatus());
-    setToastShopName(shop.name);
-    setTimeout(() => setToastShopName(null), 3000);
+    showToast({ kind: "quickMarked", shopName: shop.name, paymentId }, 5000);
     setMarkingId(null);
+  }
+
+  async function handleUndo() {
+    if (!toast || toast.kind !== "quickMarked") return;
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    await deletePayment(toast.paymentId);
+    setToast(null);
+    setShops(await getShopsWithCurrentStatus());
+  }
+
+  async function handleConfirmUndoPayment() {
+    if (!pendingUndo) return;
+    setUndoBusy(true);
+    await deletePayment(pendingUndo.id);
+    setPendingUndo(null);
+    setUndoBusy(false);
+    setShops(await getShopsWithCurrentStatus());
   }
 
   const filtered = useMemo(() => {
@@ -89,14 +148,34 @@ function ShopsList() {
 
   return (
     <div className="flex flex-col gap-4">
-      {toastShopName && (
-        <div className="fixed inset-x-4 top-16 z-30 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-base font-medium text-white shadow-lg">
-          <span>✓</span>
-          <span>
-            {toastShopName} — {t("paymentRecorded")}
+      {toast && (
+        <div
+          className={`fixed inset-x-4 top-16 z-30 mx-auto flex max-w-sm items-center justify-between gap-3 rounded-lg px-4 py-3 text-base font-medium text-white shadow-lg ${
+            toast.kind === "alreadyPaid" ? "bg-slate-600" : "bg-green-600"
+          }`}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            {toast.kind !== "alreadyPaid" && <span>✓</span>}
+            <span className="truncate">
+              {toast.shopName} —{" "}
+              {toast.kind === "alreadyPaid"
+                ? t("alreadyPaidThisMonth")
+                : t("paymentRecorded")}
+            </span>
           </span>
+          {toast.kind === "quickMarked" && (
+            <button
+              type="button"
+              onClick={handleUndo}
+              className="shrink-0 font-semibold underline underline-offset-2"
+            >
+              {t("undo")}
+            </button>
+          )}
         </div>
       )}
+
+      <BackButton fallbackHref="/" />
 
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">{t("allShops")}</h2>
@@ -170,9 +249,31 @@ function ShopsList() {
                   </button>
                 )}
 
+                {shop.tenant &&
+                  shop.status === "paid" &&
+                  shop.payments.length > 0 &&
+                  (shop.payments.length === 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setPendingUndo(shop.payments[0])}
+                      aria-label={t("removeThisPayment")}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+                    >
+                      🗑
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/shops/${shop.id}`}
+                      aria-label={t("removeThisPayment")}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+                    >
+                      🗑
+                    </Link>
+                  ))}
+
                 {shop.tenant && (
                   <Link
-                    href={`/payments/new?shopId=${shop.id}`}
+                    href={`/payments/new?shopId=${shop.id}&from=/shops`}
                     aria-label={t("addPayment")}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg font-semibold dark:border-white/[.15]"
                   >
@@ -184,6 +285,22 @@ function ShopsList() {
           </ul>
         </details>
       ))}
+
+      {pendingUndo && (
+        <ConfirmDialog
+          open={pendingUndo !== null}
+          title={t("areYouSure")}
+          message={deletePaymentMessage(
+            pendingUndo.amount,
+            formatMonthLabel(currentMonth(), language === "mr" ? "mr-IN" : "en-IN"),
+            language
+          )}
+          confirmLabel={t("delete")}
+          busy={undoBusy}
+          onConfirm={handleConfirmUndoPayment}
+          onCancel={() => setPendingUndo(null)}
+        />
+      )}
     </div>
   );
 }

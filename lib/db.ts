@@ -10,6 +10,7 @@ import type {
   ShopWithStatus,
   SyncFields,
   Tenant,
+  TenantType,
 } from "./types";
 
 export class RentalBookDB extends Dexie {
@@ -260,6 +261,29 @@ export async function getUsualAmount(shopId: string): Promise<number> {
   return paid[0].amount;
 }
 
+/**
+ * Whether a shop is already fully paid for `month` (defaults to the current
+ * month), checked fresh against Dexie rather than trusting a possibly-stale
+ * in-memory `ShopWithStatus` — used to guard against recording a duplicate
+ * payment from a stale render (e.g. a quick double-tap, or another device's
+ * sync landing between renders).
+ */
+export async function isShopFullyPaid(
+  shopId: string,
+  month: string = currentMonth()
+): Promise<boolean> {
+  const shop = await db.shops.get(shopId);
+  if (!shop || !notDeleted(shop)) return false;
+
+  const monthPayments = await db.payments
+    .where("shopId")
+    .equals(shopId)
+    .filter((p) => p.dueMonth === month && notDeleted(p))
+    .toArray();
+
+  return collectedFrom(monthPayments) >= shop.monthlyRent;
+}
+
 /** Records a payment. `dueMonth` defaults to the current month. */
 export async function recordPayment(
   payment: Omit<Payment, keyof SyncFields | "dueMonth"> & {
@@ -274,6 +298,20 @@ export async function recordPayment(
   await db.payments.add(record);
   notifyLocalChange();
   return record.id;
+}
+
+/**
+ * Updates a shop's monthly rent (e.g. an annual increase). This changes what
+ * "paid in full" means for every month evaluated against this shop going
+ * forward — and, since rent isn't snapshotted per-payment, for past months
+ * too, whenever their status is recomputed (Dashboard, Reports).
+ */
+export async function updateMonthlyRent(
+  shopId: string,
+  monthlyRent: number
+): Promise<void> {
+  await db.shops.update(shopId, { monthlyRent, ...touch() });
+  notifyLocalChange();
 }
 
 /**
@@ -375,21 +413,35 @@ export async function getShopLedger(
 }
 
 /**
- * Total amount collected across all shops for each of the 12 months of
- * `year`, in calendar order (January first).
+ * Total amount collected for each of the 12 months of `year`, in calendar
+ * order (January first). When `tenantType` is given, only payments made by a
+ * tenant of that type are counted — attributed by whoever actually made the
+ * payment (its own `tenantId`), not the shop's current occupant, so a tenant
+ * turnover doesn't retroactively reclassify earlier months.
  */
 export async function getYearlyCollectionSummary(
-  year: string
+  year: string,
+  tenantType?: TenantType
 ): Promise<MonthlyCollected[]> {
-  const payments = await db.payments
-    .where("dueMonth")
-    .between(`${year}-01`, `${year}-12`, true, true)
-    .filter(notDeleted)
-    .toArray();
+  const [payments, tenants] = await Promise.all([
+    db.payments
+      .where("dueMonth")
+      .between(`${year}-01`, `${year}-12`, true, true)
+      .filter(notDeleted)
+      .toArray(),
+    tenantType ? db.tenants.filter(notDeleted).toArray() : Promise.resolve([]),
+  ]);
+
+  const typeByTenantId = tenantType
+    ? new Map(tenants.map((tn) => [tn.id, tn.type]))
+    : null;
 
   const collectedByMonth = new Map<string, number>();
   for (const payment of payments) {
     if (payment.datePaid == null) continue;
+    if (typeByTenantId && typeByTenantId.get(payment.tenantId) !== tenantType) {
+      continue;
+    }
     const month = payment.dueMonth;
     collectedByMonth.set(month, (collectedByMonth.get(month) ?? 0) + payment.amount);
   }

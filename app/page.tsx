@@ -1,21 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { currentMonth, getShopsWithCurrentStatus } from "@/lib/db";
+import { useRouter, useSearchParams } from "next/navigation";
+import { currentMonth, deletePayment, getShopsWithCurrentStatus } from "@/lib/db";
 import { SYNCED_EVENT } from "@/lib/sync";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
-import {
-  buildReminderMessage,
-  buildWhatsAppUrl,
-  getOrAskLandlordName,
-} from "@/lib/whatsapp";
-import type { PaymentStatus, ShopWithStatus } from "@/lib/types";
+import { ConfirmDialog } from "@/app/components/ConfirmDialog";
+import { RentScopeToggle } from "@/app/components/RentScopeToggle";
+import { deletePaymentMessage } from "@/lib/confirmMessages";
+import { buildReminderMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import type { Payment, PaymentStatus, ShopWithStatus, TenantType } from "@/lib/types";
 import type { Language, TranslationKey } from "@/lib/translations";
 
 type ViewMode = "month" | "all";
 type T = (key: TranslationKey) => string;
+
+function formatMonthLabel(month: string, locale: string): string {
+  const [year, monthNum] = month.split("-").map(Number);
+  return new Date(year, monthNum - 1, 1).toLocaleDateString(locale, {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 const STATUS_PRIORITY: Record<PaymentStatus, number> = {
   unpaid: 0,
@@ -24,9 +32,25 @@ const STATUS_PRIORITY: Record<PaymentStatus, number> = {
 };
 
 export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeInner />
+    </Suspense>
+  );
+}
+
+function HomeInner() {
   const { t, language } = useTranslation();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  // Shop Rent (regular tenants) is the default landing view — the primary
+  // business — with Family Rent one tap away via the toggle.
+  const [scope, setScope] = useState<TenantType>("regular");
+  const [pendingUndo, setPendingUndo] = useState<Payment | null>(null);
+  const [undoBusy, setUndoBusy] = useState(false);
+  const [paymentSavedToast, setPaymentSavedToast] = useState<string | null>(null);
 
   useEffect(() => {
     const refresh = () => getShopsWithCurrentStatus().then(setShops);
@@ -36,13 +60,45 @@ export default function Home() {
     return () => window.removeEventListener(SYNCED_EVENT, refresh);
   }, []);
 
+  // Shows the same "Payment recorded" confirmation as the Shops list does,
+  // for a payment whose Add Payment flow returned here (e.g. it was started
+  // from a Dashboard row) instead of always landing on /shops.
+  useEffect(() => {
+    const paymentSaved = searchParams.get("paymentSaved");
+    if (!paymentSaved || !shops) return;
+    const shop = shops.find((s) => s.id === paymentSaved);
+    if (!shop) return;
+    setPaymentSavedToast(shop.name);
+    router.replace("/");
+    const timeout = setTimeout(() => setPaymentSavedToast(null), 3000);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, shops]);
+
+  async function handleConfirmUndoPayment() {
+    if (!pendingUndo) return;
+    setUndoBusy(true);
+    await deletePayment(pendingUndo.id);
+    setPendingUndo(null);
+    setUndoBusy(false);
+    setShops(await getShopsWithCurrentStatus());
+  }
+
+  // Vacant shops have no tenant type to belong to, so they're always shown
+  // regardless of the selected scope — only occupied shops of the *other*
+  // rent type are filtered out.
+  const scopedShops = useMemo(
+    () => (shops ?? []).filter((s) => s.tenant === null || s.tenant.type === scope),
+    [shops, scope]
+  );
+
   const occupied = useMemo(
-    () => (shops ?? []).filter((s) => s.tenant !== null),
-    [shops]
+    () => scopedShops.filter((s) => s.tenant !== null),
+    [scopedShops]
   );
   const vacant = useMemo(
-    () => (shops ?? []).filter((s) => s.tenant === null),
-    [shops]
+    () => scopedShops.filter((s) => s.tenant === null),
+    [scopedShops]
   );
 
   const summary = useMemo(() => {
@@ -59,7 +115,7 @@ export default function Home() {
 
   const listShops = useMemo(() => {
     if (viewMode === "all") {
-      return [...(shops ?? [])].sort(
+      return [...scopedShops].sort(
         (a, b) => a.area.localeCompare(b.area) || a.name.localeCompare(b.name)
       );
     }
@@ -69,7 +125,7 @@ export default function Home() {
       ),
       ...vacant,
     ];
-  }, [shops, viewMode, occupied, vacant]);
+  }, [scopedShops, viewMode, occupied, vacant]);
 
   if (shops === null) {
     return (
@@ -86,6 +142,17 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-5">
+      {paymentSavedToast && (
+        <div className="fixed inset-x-4 top-16 z-30 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-base font-medium text-white shadow-lg">
+          <span>✓</span>
+          <span>
+            {paymentSavedToast} — {t("paymentRecorded")}
+          </span>
+        </div>
+      )}
+
+      <RentScopeToggle scope={scope} onChange={setScope} />
+
       <SummaryCard
         totalCollected={summary.totalCollected}
         totalPending={summary.totalPending}
@@ -110,13 +177,42 @@ export default function Home() {
         >
           📊
         </Link>
+        <Link
+          href="/reminders"
+          aria-label={t("sendReminders")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
+        >
+          📣
+        </Link>
       </div>
 
       <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
         {listShops.map((shop) => (
-          <ShopRow key={shop.id} shop={shop} t={t} language={language} />
+          <ShopRow
+            key={shop.id}
+            shop={shop}
+            t={t}
+            language={language}
+            onRequestUndo={setPendingUndo}
+          />
         ))}
       </ul>
+
+      {pendingUndo && (
+        <ConfirmDialog
+          open={pendingUndo !== null}
+          title={t("areYouSure")}
+          message={deletePaymentMessage(
+            pendingUndo.amount,
+            formatMonthLabel(currentMonth(), language === "mr" ? "mr-IN" : "en-IN"),
+            language
+          )}
+          confirmLabel={t("delete")}
+          busy={undoBusy}
+          onConfirm={handleConfirmUndoPayment}
+          onCancel={() => setPendingUndo(null)}
+        />
+      )}
     </div>
   );
 }
@@ -234,28 +330,30 @@ function ShopRow({
   shop,
   t,
   language,
+  onRequestUndo,
 }: {
   shop: ShopWithStatus;
   t: T;
   language: Language;
+  onRequestUndo: (payment: Payment) => void;
 }) {
   const href = shop.tenant
-    ? `/payments/new?shopId=${shop.id}`
+    ? `/payments/new?shopId=${shop.id}&from=/`
     : `/shops/${shop.id}`;
 
   const showReminder = shop.tenant && shop.status !== "paid" && shop.tenant.phone;
+  const showCall = shop.tenant != null;
 
   function handleSendReminder() {
     if (!shop.tenant?.phone) return;
-    const landlordName = getOrAskLandlordName(language);
     const amountDue = Math.max(0, shop.monthlyRent - shop.collected);
     const message = buildReminderMessage({
       tenantName: shop.tenant.name,
       amountDue,
       shopName: shop.name,
       month: currentMonth(),
-      landlordName,
       language,
+      tenantType: shop.tenant.type,
     });
     window.open(buildWhatsAppUrl(shop.tenant.phone, message), "_blank");
   }
@@ -273,6 +371,24 @@ function ShopRow({
         </span>
       </Link>
       <StatusPill shop={shop} />
+      {showCall && (
+        <a
+          href={shop.tenant?.phone ? `tel:${shop.tenant.phone}` : undefined}
+          aria-label={t("call")}
+          aria-disabled={!shop.tenant?.phone}
+          title={shop.tenant?.phone ? undefined : t("noPhoneOnFile")}
+          onClick={(e) => {
+            if (!shop.tenant?.phone) e.preventDefault();
+          }}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-xl ${
+            shop.tenant?.phone
+              ? "border-black/[.12] dark:border-white/[.15]"
+              : "border-black/[.08] opacity-30 dark:border-white/[.08]"
+          }`}
+        >
+          📞
+        </a>
+      )}
       {showReminder && (
         <button
           type="button"
@@ -283,6 +399,27 @@ function ShopRow({
           💬
         </button>
       )}
+      {shop.tenant &&
+        shop.status === "paid" &&
+        shop.payments.length > 0 &&
+        (shop.payments.length === 1 ? (
+          <button
+            type="button"
+            onClick={() => onRequestUndo(shop.payments[0])}
+            aria-label={t("removeThisPayment")}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+          >
+            🗑
+          </button>
+        ) : (
+          <Link
+            href={`/shops/${shop.id}`}
+            aria-label={t("removeThisPayment")}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+          >
+            🗑
+          </Link>
+        ))}
     </li>
   );
 }

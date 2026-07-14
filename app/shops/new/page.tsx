@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { addShop } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { FormField, inputClass } from "@/app/components/FormField";
+import { BackButton } from "@/app/components/BackButton";
 
 export default function AddShopPage() {
   const { t } = useTranslation();
@@ -32,13 +33,7 @@ export default function AddShopPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="flex h-11 w-fit items-center text-base opacity-70"
-      >
-        ← {t("back")}
-      </button>
+      <BackButton fallbackHref="/shops" />
 
       <h2 className="text-xl font-semibold">{t("addShop")}</h2>
 

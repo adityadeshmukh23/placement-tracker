@@ -5,6 +5,7 @@ import { deletePayment, getShopLedger } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { deletePaymentMessage } from "@/lib/confirmMessages";
+import { buildShareOnlyWhatsAppUrl } from "@/lib/whatsapp";
 import type { LedgerRow, Payment, ShopLedger, Tenant } from "@/lib/types";
 import type { Language, TranslationKey } from "@/lib/translations";
 
@@ -12,9 +13,11 @@ type T = (key: TranslationKey) => string;
 
 export function PaymentHistory({
   shopId,
+  shopName,
   tenant,
 }: {
   shopId: string;
+  shopName: string;
   tenant: Tenant | null;
 }) {
   const { t, language } = useTranslation();
@@ -64,23 +67,57 @@ export function PaymentHistory({
 
   const locale = language === "mr" ? "mr-IN" : "en-IN";
 
+  async function handleShare() {
+    if (!tenant) return;
+    const text = buildLedgerShareText({
+      shopName,
+      tenantName: tenant.name,
+      year: year ?? "",
+      rows: filteredRows,
+      total: yearTotal,
+      locale,
+      t,
+    });
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ text });
+      } catch {
+        // User cancelled the share sheet — nothing to do.
+      }
+    } else {
+      window.open(buildShareOnlyWhatsAppUrl(text), "_blank");
+    }
+  }
+
   return (
     <section className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.12]">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-base font-semibold">{t("history")}</h3>
-        {ledger && ledger.years.length > 0 && (
-          <select
-            value={year ?? ""}
-            onChange={(e) => setYear(e.target.value)}
-            className="h-11 rounded-md border border-black/[.12] bg-transparent px-3 text-base dark:border-white/[.15]"
-          >
-            {ledger.years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        )}
+        <div className="flex items-center gap-2">
+          {ledger && ledger.years.length > 0 && (
+            <select
+              value={year ?? ""}
+              onChange={(e) => setYear(e.target.value)}
+              className="h-11 rounded-md border border-black/[.12] bg-transparent px-3 text-base dark:border-white/[.15]"
+            >
+              {ledger.years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          )}
+          {filteredRows.length > 0 && (
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label={t("share")}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-xl dark:border-white/[.15]"
+            >
+              📤
+            </button>
+          )}
+        </div>
       </div>
 
       {ledger === null ? (
@@ -227,4 +264,26 @@ function monthOf(row: LedgerRow): string {
 
 function rowKey(row: LedgerRow): string {
   return row.kind === "payment" ? `p-${row.payment.id}` : `m-${row.month}`;
+}
+
+function buildLedgerShareText(params: {
+  shopName: string;
+  tenantName: string;
+  year: string;
+  rows: LedgerRow[];
+  total: number;
+  locale: string;
+  t: T;
+}): string {
+  const { shopName, tenantName, year, rows, total, locale, t } = params;
+  const lines = rows.map((row) => {
+    const label = formatMonthLabel(monthOf(row), locale);
+    if (row.kind === "missed") return `${label}: ${t("missed")}`;
+    return `${label}: ₹${row.payment.amount.toLocaleString("en-IN")}`;
+  });
+  return [
+    `${shopName} — ${tenantName} (${year})`,
+    ...lines,
+    `${t("totalCollected")}: ₹${total.toLocaleString("en-IN")}`,
+  ].join("\n");
 }

@@ -10,11 +10,10 @@ import {
 } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { FormField, inputClass } from "@/app/components/FormField";
-import {
-  buildReceiptMessage,
-  buildWhatsAppUrl,
-  getOrAskLandlordName,
-} from "@/lib/whatsapp";
+import { ConfirmDialog } from "@/app/components/ConfirmDialog";
+import { BackButton } from "@/app/components/BackButton";
+import { buildReceiptMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { alreadyPaidMessage, recordAnywayConfirmMessage } from "@/lib/confirmMessages";
 import type { PaymentMode, ShopWithStatus } from "@/lib/types";
 
 interface SavedPayment {
@@ -23,6 +22,14 @@ interface SavedPayment {
   tenantPhone?: string;
   amount: number;
   month: string;
+}
+
+function formatMonthLabel(month: string, locale: string): string {
+  const [year, monthNum] = month.split("-").map(Number);
+  return new Date(year, monthNum - 1, 1).toLocaleDateString(locale, {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function todayInputValue(): string {
@@ -46,6 +53,11 @@ function AddPaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedShopId = searchParams.get("shopId");
+  // Where to return to when done — the screen this flow was actually opened
+  // from (a shop row, the FAB from wherever it was tapped, etc.), not a
+  // screen hardcoded regardless of origin. Falls back to the shop list for
+  // old links that don't carry it.
+  const from = searchParams.get("from") || "/shops";
 
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(
@@ -59,6 +71,8 @@ function AddPaymentForm() {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedPayment, setSavedPayment] = useState<SavedPayment | null>(null);
+  const [recordAnyway, setRecordAnyway] = useState(false);
+  const [confirmRecordAnyway, setConfirmRecordAnyway] = useState(false);
 
   useEffect(() => {
     getShopsWithCurrentStatus().then(setShops);
@@ -72,6 +86,7 @@ function AddPaymentForm() {
   useEffect(() => {
     if (!selectedShopId) return;
     getUsualAmount(selectedShopId).then((usual) => setAmount(String(usual)));
+    setRecordAnyway(false);
   }, [selectedShopId]);
 
   const occupiedShops = useMemo(
@@ -89,13 +104,21 @@ function AddPaymentForm() {
     );
   }, [occupiedShops, query]);
 
+  const month = currentMonth();
+  const locale = language === "mr" ? "mr-IN" : "en-IN";
+  const monthLabel = formatMonthLabel(month, locale);
+  const alreadyPaid = selectedShop?.status === "paid";
+
   const canSave =
-    selectedShop?.tenant != null && Number(amount) > 0 && date !== "" && !saving;
+    selectedShop?.tenant != null &&
+    Number(amount) > 0 &&
+    date !== "" &&
+    !saving &&
+    (!alreadyPaid || recordAnyway);
 
   async function handleSave() {
     if (!selectedShop?.tenant || !canSave) return;
     setSaving(true);
-    const month = currentMonth();
     await recordPayment({
       shopId: selectedShop.id,
       tenantId: selectedShop.tenant.id,
@@ -116,12 +139,10 @@ function AddPaymentForm() {
 
   function handleSendReceipt() {
     if (!savedPayment?.tenantPhone) return;
-    const landlordName = getOrAskLandlordName(language);
     const message = buildReceiptMessage({
       amount: savedPayment.amount,
       shopName: savedPayment.shopName,
       month: savedPayment.month,
-      landlordName,
       language,
     });
     window.open(buildWhatsAppUrl(savedPayment.tenantPhone, message), "_blank");
@@ -129,7 +150,22 @@ function AddPaymentForm() {
 
   function handleDone() {
     if (!savedPayment) return;
-    router.push(`/shops?paymentSaved=${savedPayment.shopId}`);
+    router.push(`${from}?paymentSaved=${savedPayment.shopId}`);
+  }
+
+  /** Back from the step-2 form: a real previous step (the shop picker) if we
+   * came from there, otherwise the true origin screen — with a safe fallback
+   * if there's no in-app history to go back to. */
+  function handleBackFromForm() {
+    if (!preselectedShopId) {
+      setSelectedShopId(null);
+      return;
+    }
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(from);
+    }
   }
 
   // Step 3: payment recorded — offer to send a WhatsApp receipt before leaving.
@@ -171,6 +207,8 @@ function AddPaymentForm() {
   if (!selectedShopId) {
     return (
       <div className="flex flex-col gap-4">
+        <BackButton fallbackHref={from} />
+
         <h2 className="text-xl font-semibold">{t("addPayment")}</h2>
 
         <input
@@ -217,9 +255,7 @@ function AddPaymentForm() {
     <div className="flex flex-col gap-5">
       <button
         type="button"
-        onClick={() =>
-          preselectedShopId ? router.back() : setSelectedShopId(null)
-        }
+        onClick={handleBackFromForm}
         className="flex h-11 w-fit items-center text-base opacity-70"
       >
         ← {t("back")}
@@ -233,6 +269,25 @@ function AddPaymentForm() {
           </p>
         )}
       </div>
+
+      {alreadyPaid && (
+        <div className="rounded-lg border border-amber-600/30 bg-amber-600/10 p-3 text-base text-amber-800 dark:text-amber-400">
+          <p>{alreadyPaidMessage(monthLabel, language)}</p>
+          {recordAnyway ? (
+            <p className="mt-2 text-sm font-medium">
+              {t("recordingAnywayConfirmed")}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmRecordAnyway(true)}
+              className="mt-2 flex h-11 items-center rounded-lg border border-amber-600/40 px-3 text-base font-semibold"
+            >
+              {t("recordAnyway")}
+            </button>
+          )}
+        </div>
+      )}
 
       <FormField label={t("amount")}>
         <input
@@ -303,6 +358,21 @@ function AddPaymentForm() {
       >
         {saving ? t("loading") : t("save")}
       </button>
+
+      {selectedShop && (
+        <ConfirmDialog
+          open={confirmRecordAnyway}
+          title={t("areYouSure")}
+          message={recordAnywayConfirmMessage(selectedShop.name, monthLabel, language)}
+          confirmLabel={t("recordAnyway")}
+          danger={false}
+          onConfirm={() => {
+            setRecordAnyway(true);
+            setConfirmRecordAnyway(false);
+          }}
+          onCancel={() => setConfirmRecordAnyway(false)}
+        />
+      )}
     </div>
   );
 }
