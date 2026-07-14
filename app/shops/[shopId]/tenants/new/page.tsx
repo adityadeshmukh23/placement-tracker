@@ -12,7 +12,7 @@ export default function AddTenantPage({
 }: {
   params: { shopId: string };
 }) {
-  const shopId = Number(params.shopId);
+  const shopId = params.shopId;
   const { t } = useTranslation();
   const router = useRouter();
   const [shop, setShop] = useState<Shop | null>(null);
@@ -35,7 +35,6 @@ export default function AddTenantPage({
       name: name.trim(),
       phone: phone.trim() || undefined,
       type,
-      createdAt: new Date(),
     });
     router.push(`/shops/${shopId}`);
   }

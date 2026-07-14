@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
+import { SyncProvider } from "@/lib/SyncContext";
 import { LanguageToggle } from "./components/LanguageToggle";
+import { SyncBar } from "./components/SyncBar";
+import { PinGate } from "./components/PinGate";
 import { Fab } from "./components/Fab";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { ServiceWorkerRegister } from "./components/ServiceWorkerRegister";
@@ -58,13 +61,17 @@ export default function RootLayout({
       >
         <ServiceWorkerRegister />
         <LanguageProvider>
-          <LanguageToggle />
-          <header className="sticky top-0 z-10 border-b border-black/[.08] bg-[var(--background)] px-4 py-3 dark:border-white/[.145]">
-            <h1 className="text-lg font-semibold">BhadeBook</h1>
-          </header>
-          <InstallPrompt />
-          <main className="flex-1 px-4 py-4 pb-24">{children}</main>
-          <Fab />
+          <SyncProvider>
+            <PinGate />
+            <LanguageToggle />
+            <header className="sticky top-0 z-10 border-b border-black/[.08] bg-[var(--background)] px-4 py-3 dark:border-white/[.145]">
+              <h1 className="text-lg font-semibold">Rental Book</h1>
+            </header>
+            <SyncBar />
+            <InstallPrompt />
+            <main className="flex-1 px-4 py-4 pb-24">{children}</main>
+            <Fab />
+          </SyncProvider>
         </LanguageProvider>
       </body>
     </html>

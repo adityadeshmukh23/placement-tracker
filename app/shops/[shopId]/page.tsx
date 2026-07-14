@@ -15,7 +15,7 @@ export default function ShopDetailPage({
 }: {
   params: { shopId: string };
 }) {
-  const shopId = Number(params.shopId);
+  const shopId = params.shopId;
   const { t, language } = useTranslation();
   const router = useRouter();
   const [shop, setShop] = useState<ShopWithStatus | null | undefined>(

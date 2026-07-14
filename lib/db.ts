@@ -8,26 +8,48 @@ import type {
   Shop,
   ShopLedger,
   ShopWithStatus,
+  SyncFields,
   Tenant,
 } from "./types";
 
-export class BhadeBookDB extends Dexie {
-  shops!: Table<Shop, number>;
-  tenants!: Table<Tenant, number>;
-  payments!: Table<Payment, number>;
+export class RentalBookDB extends Dexie {
+  shops!: Table<Shop, string>;
+  tenants!: Table<Tenant, string>;
+  payments!: Table<Payment, string>;
 
   constructor() {
+    // Storage name intentionally left as "bhadebook" (the app's former name) so
+    // existing local data isn't orphaned under a new IndexedDB database name.
     super("bhadebook");
+
+    // v1: the original single-device schema (auto-increment integer keys).
     this.version(1).stores({
-      // Only indexed fields are listed; other fields are stored but not indexed.
       shops: "++id, name, area, createdAt",
       tenants: "++id, shopId, type, createdAt",
       payments: "++id, shopId, tenantId, dueMonth, datePaid, createdAt",
     });
+
+    // v2: drop the old stores. Cloud sync requires globally-unique string
+    // (UUID) primary keys, which is an incompatible primary-key change, so the
+    // integer-keyed stores are deleted and recreated. Any pre-sync local data
+    // is discarded (a fresh start was chosen deliberately).
+    this.version(2).stores({
+      shops: null,
+      tenants: null,
+      payments: null,
+    });
+
+    // v3: the sync-ready schema. `id` is a client-generated UUID; `updatedAt`
+    // drives last-write-wins; only indexed fields are listed.
+    this.version(3).stores({
+      shops: "id, area, updatedAt",
+      tenants: "id, shopId, updatedAt",
+      payments: "id, shopId, tenantId, dueMonth, updatedAt",
+    });
   }
 }
 
-export const db = new BhadeBookDB();
+export const db = new RentalBookDB();
 
 /** Returns the current month formatted as "YYYY-MM". */
 export function currentMonth(date: Date = new Date()): string {
@@ -35,6 +57,45 @@ export function currentMonth(date: Date = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 }
+
+// --- Sync-field helpers ------------------------------------------------------
+
+/** A globally-unique id, stable across devices (unlike an auto-increment key). */
+function newId(): string {
+  return crypto.randomUUID();
+}
+
+/**
+ * The sync scaffolding for a brand-new record: a fresh UUID, timestamps, no
+ * tombstone, and `dirty: true` so the next sync pushes it to the server.
+ */
+function freshRecord(now: Date = new Date()): SyncFields {
+  return { id: newId(), createdAt: now, updatedAt: now, deletedAt: null, dirty: true };
+}
+
+/**
+ * The fields to merge into an existing record on any local change so it is
+ * re-pushed and wins later last-write-wins comparisons.
+ */
+function touch(now: Date = new Date()): Pick<SyncFields, "updatedAt" | "dirty"> {
+  return { updatedAt: now, dirty: true };
+}
+
+/** True for records that have not been tombstoned (soft-deleted). */
+function notDeleted(record: { deletedAt: Date | null }): boolean {
+  return record.deletedAt == null;
+}
+
+/** Fired after any local write so the sync provider can push promptly. */
+export const LOCAL_CHANGE_EVENT = "bhadebook:localchange";
+
+function notifyLocalChange(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(LOCAL_CHANGE_EVENT));
+  }
+}
+
+// --- Reads / writes ----------------------------------------------------------
 
 /** Sum of amounts for payments that have actually been paid. */
 function collectedFrom(payments: Payment[]): number {
@@ -52,23 +113,43 @@ function isActive(tenant: Tenant): boolean {
   return tenant.active !== false;
 }
 
+/** A live, active tenant: neither deactivated nor tombstoned. */
+function isLiveActive(tenant: Tenant): boolean {
+  return isActive(tenant) && notDeleted(tenant);
+}
+
+/** Adds a shop. */
+export async function addShop(
+  shop: Omit<Shop, keyof SyncFields>
+): Promise<string> {
+  const record = { ...shop, ...freshRecord() };
+  await db.shops.add(record);
+  notifyLocalChange();
+  return record.id;
+}
+
 /**
  * Adds a tenant to a shop while enforcing a single active tenant per shop:
  * any existing active tenant on the same shop is deactivated first, then the
  * new tenant is inserted as the active one.
  */
 export async function addTenant(
-  tenant: Omit<Tenant, "id" | "active">
-): Promise<number> {
-  return db.transaction("rw", db.tenants, async () => {
+  tenant: Omit<Tenant, keyof SyncFields | "active">
+): Promise<string> {
+  const id = await db.transaction("rw", db.tenants, async () => {
+    const now = new Date();
     await db.tenants
       .where("shopId")
       .equals(tenant.shopId)
-      .filter(isActive)
-      .modify({ active: false });
+      .filter(isLiveActive)
+      .modify({ active: false, ...touch(now) });
 
-    return db.tenants.add({ ...tenant, active: true });
+    const record = { ...tenant, active: true, ...freshRecord(now) };
+    await db.tenants.add(record);
+    return record.id;
   });
+  notifyLocalChange();
+  return id;
 }
 
 function statusFor(monthlyRent: number, collected: number): PaymentStatus {
@@ -85,17 +166,17 @@ export async function getShopsWithCurrentStatus(
   month: string = currentMonth()
 ): Promise<ShopWithStatus[]> {
   const [shops, tenants, monthPayments] = await Promise.all([
-    db.shops.toArray(),
-    db.tenants.filter(isActive).toArray(),
-    db.payments.where("dueMonth").equals(month).toArray(),
+    db.shops.filter(notDeleted).toArray(),
+    db.tenants.filter(isLiveActive).toArray(),
+    db.payments.where("dueMonth").equals(month).filter(notDeleted).toArray(),
   ]);
 
-  const tenantByShop = new Map<number, Tenant>();
+  const tenantByShop = new Map<string, Tenant>();
   for (const tenant of tenants) {
     tenantByShop.set(tenant.shopId, tenant);
   }
 
-  const paymentsByShop = new Map<number, Payment[]>();
+  const paymentsByShop = new Map<string, Payment[]>();
   for (const payment of monthPayments) {
     const list = paymentsByShop.get(payment.shopId) ?? [];
     list.push(payment);
@@ -103,11 +184,11 @@ export async function getShopsWithCurrentStatus(
   }
 
   return shops.map((shop) => {
-    const shopPayments = paymentsByShop.get(shop.id!) ?? [];
+    const shopPayments = paymentsByShop.get(shop.id) ?? [];
     const collected = collectedFrom(shopPayments);
     return {
       ...shop,
-      tenant: tenantByShop.get(shop.id!) ?? null,
+      tenant: tenantByShop.get(shop.id) ?? null,
       payments: shopPayments,
       collected,
       status: statusFor(shop.monthlyRent, collected),
@@ -124,15 +205,15 @@ export async function getMonthlySummary(
   month: string = currentMonth()
 ): Promise<MonthlySummary> {
   const [shops, tenants, monthPayments] = await Promise.all([
-    db.shops.toArray(),
-    db.tenants.filter(isActive).toArray(),
-    db.payments.where("dueMonth").equals(month).toArray(),
+    db.shops.filter(notDeleted).toArray(),
+    db.tenants.filter(isLiveActive).toArray(),
+    db.payments.where("dueMonth").equals(month).filter(notDeleted).toArray(),
   ]);
 
   const occupiedShopIds = new Set(tenants.map((t) => t.shopId));
 
   const totalDue = shops
-    .filter((s) => occupiedShopIds.has(s.id!))
+    .filter((s) => occupiedShopIds.has(s.id))
     .reduce((sum, s) => sum + s.monthlyRent, 0);
 
   const totalCollected = collectedFrom(
@@ -150,11 +231,11 @@ export async function getMonthlySummary(
 /** Number of shops that currently have no active tenant. */
 export async function getVacantShopCount(): Promise<number> {
   const [shops, tenants] = await Promise.all([
-    db.shops.toArray(),
-    db.tenants.filter(isActive).toArray(),
+    db.shops.filter(notDeleted).toArray(),
+    db.tenants.filter(isLiveActive).toArray(),
   ]);
   const occupiedShopIds = new Set(tenants.map((t) => t.shopId));
-  return shops.filter((s) => !occupiedShopIds.has(s.id!)).length;
+  return shops.filter((s) => !occupiedShopIds.has(s.id)).length;
 }
 
 /**
@@ -163,11 +244,15 @@ export async function getVacantShopCount(): Promise<number> {
  * negotiated amount different from the nominal rent), otherwise the shop's
  * monthly rent.
  */
-export async function getUsualAmount(shopId: number): Promise<number> {
+export async function getUsualAmount(shopId: string): Promise<number> {
   const shop = await db.shops.get(shopId);
   if (!shop) return 0;
 
-  const payments = await db.payments.where("shopId").equals(shopId).toArray();
+  const payments = await db.payments
+    .where("shopId")
+    .equals(shopId)
+    .filter(notDeleted)
+    .toArray();
   const paid = payments.filter((p) => p.datePaid != null);
   if (paid.length === 0) return shop.monthlyRent;
 
@@ -177,37 +262,50 @@ export async function getUsualAmount(shopId: number): Promise<number> {
 
 /** Records a payment. `dueMonth` defaults to the current month. */
 export async function recordPayment(
-  payment: Omit<Payment, "id" | "createdAt" | "dueMonth"> & {
+  payment: Omit<Payment, keyof SyncFields | "dueMonth"> & {
     dueMonth?: string;
   }
-): Promise<number> {
-  return db.payments.add({
+): Promise<string> {
+  const record = {
     ...payment,
     dueMonth: payment.dueMonth ?? currentMonth(),
-    createdAt: new Date(),
-  });
+    ...freshRecord(),
+  };
+  await db.payments.add(record);
+  notifyLocalChange();
+  return record.id;
 }
 
-/** Permanently deletes a shop along with all of its tenants and payments. */
-export async function deleteShop(shopId: number): Promise<void> {
+/**
+ * Deletes a shop along with all of its tenants and payments. Deletes are soft
+ * (tombstoned via `deletedAt`) so they can propagate to other devices; reads
+ * exclude tombstoned rows, so the shop disappears from the UI immediately.
+ */
+export async function deleteShop(shopId: string): Promise<void> {
   await db.transaction("rw", db.shops, db.tenants, db.payments, async () => {
-    await db.payments.where("shopId").equals(shopId).delete();
-    await db.tenants.where("shopId").equals(shopId).delete();
-    await db.shops.delete(shopId);
+    const now = new Date();
+    const tombstone = { deletedAt: now, ...touch(now) };
+    await db.payments.where("shopId").equals(shopId).modify(tombstone);
+    await db.tenants.where("shopId").equals(shopId).modify(tombstone);
+    await db.shops.update(shopId, tombstone);
   });
+  notifyLocalChange();
 }
 
 /**
  * Ends a tenancy: the tenant is deactivated (not deleted) so the shop's
  * payment history stays intact, and the shop becomes vacant again.
  */
-export async function removeTenant(tenantId: number): Promise<void> {
-  await db.tenants.update(tenantId, { active: false });
+export async function removeTenant(tenantId: string): Promise<void> {
+  await db.tenants.update(tenantId, { active: false, ...touch() });
+  notifyLocalChange();
 }
 
-/** Permanently deletes a single payment record. */
-export async function deletePayment(paymentId: number): Promise<void> {
-  await db.payments.delete(paymentId);
+/** Soft-deletes (tombstones) a single payment record. */
+export async function deletePayment(paymentId: string): Promise<void> {
+  const now = new Date();
+  await db.payments.update(paymentId, { deletedAt: now, ...touch(now) });
+  notifyLocalChange();
 }
 
 /** Every "YYYY-MM" month from `startMonth` to `endMonth`, inclusive. */
@@ -240,10 +338,14 @@ function monthOfRow(row: LedgerRow): string {
  * (i.e. before the current tenant moved in) are never marked missed.
  */
 export async function getShopLedger(
-  shopId: number,
+  shopId: string,
   activeSince: Date
 ): Promise<ShopLedger> {
-  const payments = await db.payments.where("shopId").equals(shopId).toArray();
+  const payments = await db.payments
+    .where("shopId")
+    .equals(shopId)
+    .filter(notDeleted)
+    .toArray();
 
   const startMonth = currentMonth(activeSince);
   const endMonth = currentMonth();
@@ -282,6 +384,7 @@ export async function getYearlyCollectionSummary(
   const payments = await db.payments
     .where("dueMonth")
     .between(`${year}-01`, `${year}-12`, true, true)
+    .filter(notDeleted)
     .toArray();
 
   const collectedByMonth = new Map<string, number>();
@@ -302,7 +405,7 @@ export async function getYearlyCollectionSummary(
  * including the current year even if it has no payments yet.
  */
 export async function getAvailableYears(): Promise<string[]> {
-  const payments = await db.payments.toArray();
+  const payments = await db.payments.filter(notDeleted).toArray();
   const years = new Set(payments.map((p) => p.dueMonth.slice(0, 4)));
   years.add(currentMonth().slice(0, 4));
   return Array.from(years).sort((a, b) => b.localeCompare(a));

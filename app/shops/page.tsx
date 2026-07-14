@@ -8,6 +8,7 @@ import {
   getUsualAmount,
   recordPayment,
 } from "@/lib/db";
+import { SYNCED_EVENT } from "@/lib/sync";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
 import type { ShopWithStatus } from "@/lib/types";
@@ -26,17 +27,20 @@ function ShopsList() {
   const searchParams = useSearchParams();
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
   const [query, setQuery] = useState("");
-  const [markingId, setMarkingId] = useState<number | null>(null);
+  const [markingId, setMarkingId] = useState<string | null>(null);
   const [toastShopName, setToastShopName] = useState<string | null>(null);
 
   useEffect(() => {
-    getShopsWithCurrentStatus().then(setShops);
+    const refresh = () => getShopsWithCurrentStatus().then(setShops);
+    refresh();
+    window.addEventListener(SYNCED_EVENT, refresh);
+    return () => window.removeEventListener(SYNCED_EVENT, refresh);
   }, []);
 
   useEffect(() => {
     const paymentSaved = searchParams.get("paymentSaved");
     if (!paymentSaved || !shops) return;
-    const shop = shops.find((s) => s.id === Number(paymentSaved));
+    const shop = shops.find((s) => s.id === paymentSaved);
     if (!shop) return;
     setToastShopName(shop.name);
     router.replace("/shops");
@@ -47,11 +51,11 @@ function ShopsList() {
 
   async function handleMarkAsPaid(shop: ShopWithStatus) {
     if (!shop.tenant || markingId !== null) return;
-    setMarkingId(shop.id!);
-    const amount = await getUsualAmount(shop.id!);
+    setMarkingId(shop.id);
+    const amount = await getUsualAmount(shop.id);
     await recordPayment({
-      shopId: shop.id!,
-      tenantId: shop.tenant.id!,
+      shopId: shop.id,
+      tenantId: shop.tenant.id,
       amount,
       datePaid: new Date(),
       paymentMode: "cash",

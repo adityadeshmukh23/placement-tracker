@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/db";
+import { addShop } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { FormField, inputClass } from "@/app/components/FormField";
 
@@ -21,12 +21,11 @@ export default function AddShopPage() {
   async function handleSave() {
     if (!canSave || saving) return;
     setSaving(true);
-    const id = await db.shops.add({
+    const id = await addShop({
       name: name.trim(),
       area: area.trim(),
       monthlyRent: Number(monthlyRent),
       address: address.trim() || undefined,
-      createdAt: new Date(),
     });
     router.push(`/shops/${id}`);
   }

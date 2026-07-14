@@ -78,6 +78,25 @@ export const translations = {
   areYouSure: { en: "Are you sure?", mr: "तुम्हाला खात्री आहे का?" },
   loading: { en: "Loading…", mr: "लोड होत आहे…" },
   switchLanguage: { en: "Switch language", mr: "भाषा बदला" },
+  cloudSync: { en: "Cloud Sync", mr: "क्लाउड सिंक" },
+  signIn: { en: "Sign In", mr: "साइन इन" },
+  signOut: { en: "Sign Out", mr: "साइन आउट" },
+  pin: { en: "PIN", mr: "पिन" },
+  enterPin: { en: "Enter shared PIN", mr: "सामायिक पिन टाका" },
+  pinGateSubtitle: {
+    en: "Enter the household PIN to sync this device with everyone's shared data.",
+    mr: "हे डिव्हाइस सर्वांच्या सामायिक डेटाशी सिंक करण्यासाठी घरातील पिन टाका.",
+  },
+  unlock: { en: "Unlock", mr: "अनलॉक करा" },
+  wrongPin: { en: "Wrong PIN. Please try again.", mr: "चुकीचा पिन. कृपया पुन्हा प्रयत्न करा." },
+  continueOffline: { en: "Continue without sync", mr: "सिंकशिवाय सुरू ठेवा" },
+  signInToSync: { en: "Sign in to sync", mr: "सिंक करण्यासाठी साइन इन करा" },
+  syncing: { en: "Syncing…", mr: "सिंक होत आहे…" },
+  synced: { en: "Synced", mr: "सिंक झाले" },
+  syncOffline: { en: "Offline", mr: "ऑफलाइन" },
+  syncError: { en: "Sync failed", mr: "सिंक अयशस्वी" },
+  syncNow: { en: "Sync now", mr: "आता सिंक करा" },
+  close: { en: "Close", mr: "बंद करा" },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {

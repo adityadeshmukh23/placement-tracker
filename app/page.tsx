@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { currentMonth, getShopsWithCurrentStatus } from "@/lib/db";
+import { SYNCED_EVENT } from "@/lib/sync";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
 import {
@@ -28,7 +29,11 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
 
   useEffect(() => {
-    getShopsWithCurrentStatus().then(setShops);
+    const refresh = () => getShopsWithCurrentStatus().then(setShops);
+    refresh();
+    // Refresh when a background sync pulls in changes from the other device.
+    window.addEventListener(SYNCED_EVENT, refresh);
+    return () => window.removeEventListener(SYNCED_EVENT, refresh);
   }, []);
 
   const occupied = useMemo(

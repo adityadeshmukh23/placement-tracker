@@ -14,7 +14,7 @@ export function PaymentHistory({
   shopId,
   tenant,
 }: {
-  shopId: number;
+  shopId: string;
   tenant: Tenant | null;
 }) {
   const { t, language } = useTranslation();

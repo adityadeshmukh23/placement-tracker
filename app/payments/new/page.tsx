@@ -18,7 +18,7 @@ import {
 import type { PaymentMode, ShopWithStatus } from "@/lib/types";
 
 interface SavedPayment {
-  shopId: number;
+  shopId: string;
   shopName: string;
   tenantPhone?: string;
   amount: number;
@@ -48,8 +48,8 @@ function AddPaymentForm() {
   const preselectedShopId = searchParams.get("shopId");
 
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
-  const [selectedShopId, setSelectedShopId] = useState<number | null>(
-    preselectedShopId ? Number(preselectedShopId) : null
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(
+    preselectedShopId
   );
   const [query, setQuery] = useState("");
   const [amount, setAmount] = useState("");
@@ -97,8 +97,8 @@ function AddPaymentForm() {
     setSaving(true);
     const month = currentMonth();
     await recordPayment({
-      shopId: selectedShop.id!,
-      tenantId: selectedShop.tenant.id!,
+      shopId: selectedShop.id,
+      tenantId: selectedShop.tenant.id,
       amount: Number(amount),
       dueMonth: month,
       datePaid: new Date(date),
@@ -106,7 +106,7 @@ function AddPaymentForm() {
       notes: notes.trim() || undefined,
     });
     setSavedPayment({
-      shopId: selectedShop.id!,
+      shopId: selectedShop.id,
       shopName: selectedShop.name,
       tenantPhone: selectedShop.tenant.phone,
       amount: Number(amount),
