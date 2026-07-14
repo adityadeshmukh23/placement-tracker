@@ -9,7 +9,7 @@ export function FormField({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium opacity-70">{label}</span>
+      <span className="text-base font-medium opacity-70">{label}</span>
       {children}
     </label>
   );

@@ -65,12 +65,12 @@ export function InstallPrompt() {
 
   return (
     <div className="fixed inset-x-4 top-16 z-30 mx-auto flex max-w-sm items-center justify-between gap-3 rounded-lg border border-black/[.08] bg-[var(--background)] px-4 py-3 shadow-lg dark:border-white/[.145]">
-      <span className="text-sm font-medium">{t("installApp")}</span>
+      <span className="text-base font-medium">{t("installApp")}</span>
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
           onClick={handleInstall}
-          className="flex h-9 items-center rounded-md bg-[var(--foreground)] px-3 text-sm font-semibold text-[var(--background)]"
+          className="flex h-11 items-center rounded-md bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)]"
         >
           {t("install")}
         </button>
@@ -78,7 +78,7 @@ export function InstallPrompt() {
           type="button"
           onClick={handleDismiss}
           aria-label={t("dismiss")}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-lg opacity-60"
+          className="flex h-11 w-11 items-center justify-center rounded-md text-xl opacity-60"
         >
           ×
         </button>

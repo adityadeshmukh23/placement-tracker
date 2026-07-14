@@ -31,7 +31,7 @@ export default function ReportsPage() {
       <button
         type="button"
         onClick={() => router.back()}
-        className="flex h-11 w-fit items-center text-sm opacity-70"
+        className="flex h-11 w-fit items-center text-base opacity-70"
       >
         ← {t("back")}
       </button>
@@ -44,7 +44,7 @@ export default function ReportsPage() {
             key={tb}
             type="button"
             onClick={() => setTab(tb)}
-            className={`h-9 flex-1 rounded-md text-sm font-medium ${
+            className={`h-11 flex-1 rounded-md text-base font-medium ${
               tab === tb
                 ? "bg-[var(--foreground)] text-[var(--background)]"
                 : "opacity-60"
@@ -117,16 +117,16 @@ function MonthlyReport({ t }: { t: T }) {
           type="button"
           onClick={handleExport}
           disabled={!summary}
-          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] disabled:opacity-40"
+          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)] disabled:opacity-40"
         >
           {t("export")}
         </button>
       </div>
 
-      {summary && (
+      {summary ? (
         <div className="grid grid-cols-2 gap-4 rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
           <div>
-            <p className="text-xs uppercase tracking-wide opacity-50">
+            <p className="text-sm uppercase tracking-wide opacity-50">
               {t("totalCollected")}
             </p>
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -134,7 +134,7 @@ function MonthlyReport({ t }: { t: T }) {
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide opacity-50">
+            <p className="text-sm uppercase tracking-wide opacity-50">
               {t("totalPending")}
             </p>
             <p className="text-2xl font-bold text-red-600 dark:text-red-400">
@@ -142,12 +142,17 @@ function MonthlyReport({ t }: { t: T }) {
             </p>
           </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
+          <div className="h-9 w-24 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+          <div className="h-9 w-24 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+        </div>
       )}
 
       {shops === null ? (
-        <p className="py-4 text-center text-sm opacity-50">…</p>
+        <RowsSkeleton />
       ) : occupiedShops.length === 0 ? (
-        <p className="py-4 text-center text-sm opacity-50">{t("noResults")}</p>
+        <p className="py-4 text-center text-base opacity-50">{t("noResults")}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
           {occupiedShops.map((shop) => (
@@ -159,14 +164,14 @@ function MonthlyReport({ t }: { t: T }) {
                 <span className="truncate text-base font-medium">
                   {shop.name}
                 </span>
-                <span className="truncate text-sm opacity-60">{shop.area}</span>
+                <span className="truncate text-base opacity-60">{shop.area}</span>
               </div>
               <div className="flex shrink-0 flex-col items-end">
                 <span className="text-base font-semibold text-green-600 dark:text-green-400">
                   ₹{shop.collected.toLocaleString("en-IN")}
                 </span>
                 {shop.collected < shop.monthlyRent && (
-                  <span className="text-xs text-red-600 dark:text-red-400">
+                  <span className="text-sm text-red-600 dark:text-red-400">
                     ₹{(shop.monthlyRent - shop.collected).toLocaleString("en-IN")}{" "}
                     {t("pending")}
                   </span>
@@ -239,20 +244,24 @@ function YearlyReport({ t }: { t: T }) {
           type="button"
           onClick={handleExport}
           disabled={!monthly}
-          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] disabled:opacity-40"
+          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)] disabled:opacity-40"
         >
           {t("export")}
         </button>
       </div>
 
       <div className="rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
-        <p className="text-xs uppercase tracking-wide opacity-50">
+        <p className="text-sm uppercase tracking-wide opacity-50">
           {t("total")}
           {year ? ` · ${year}` : ""}
         </p>
-        <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-          ₹{total.toLocaleString("en-IN")}
-        </p>
+        {monthly ? (
+          <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+            ₹{total.toLocaleString("en-IN")}
+          </p>
+        ) : (
+          <div className="mt-1 h-9 w-28 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+        )}
       </div>
 
       {monthly && (
@@ -263,7 +272,7 @@ function YearlyReport({ t }: { t: T }) {
                 className="w-full rounded-t bg-green-600/70 dark:bg-green-400/70"
                 style={{ height: `${Math.max(2, (m.collected / max) * 80)}px` }}
               />
-              <span className="text-[10px] opacity-60">
+              <span className="text-xs opacity-60">
                 {monthLabel(m.month, locale, "short")}
               </span>
             </div>
@@ -272,12 +281,12 @@ function YearlyReport({ t }: { t: T }) {
       )}
 
       {monthly === null ? (
-        <p className="py-4 text-center text-sm opacity-50">…</p>
+        <RowsSkeleton />
       ) : (
         <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
           {monthly.map((m) => (
             <li key={m.month} className="flex items-center justify-between px-4 py-3">
-              <span className="text-sm font-medium">
+              <span className="text-base font-medium">
                 {monthLabel(m.month, locale, "long")}
               </span>
               <span className="text-base font-semibold text-green-600 dark:text-green-400">
@@ -287,6 +296,19 @@ function YearlyReport({ t }: { t: T }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function RowsSkeleton() {
+  return (
+    <div className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="h-4 w-28 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+          <div className="h-4 w-16 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+        </div>
+      ))}
     </div>
   );
 }

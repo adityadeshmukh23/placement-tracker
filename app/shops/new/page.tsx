@@ -36,7 +36,7 @@ export default function AddShopPage() {
       <button
         type="button"
         onClick={() => router.back()}
-        className="flex h-11 w-fit items-center text-sm opacity-70"
+        className="flex h-11 w-fit items-center text-base opacity-70"
       >
         ← {t("back")}
       </button>
@@ -84,7 +84,7 @@ export default function AddShopPage() {
         onClick={handleSave}
         className="h-14 rounded-lg bg-[var(--foreground)] text-base font-semibold text-[var(--background)] disabled:opacity-40"
       >
-        {t("save")}
+        {saving ? t("loading") : t("save")}
       </button>
     </div>
   );

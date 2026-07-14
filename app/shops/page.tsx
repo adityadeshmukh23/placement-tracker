@@ -8,7 +8,6 @@ import {
   getUsualAmount,
   recordPayment,
 } from "@/lib/db";
-import { seedIfEmpty } from "@/lib/seed";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
 import type { ShopWithStatus } from "@/lib/types";
@@ -31,10 +30,7 @@ function ShopsList() {
   const [toastShopName, setToastShopName] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      await seedIfEmpty();
-      setShops(await getShopsWithCurrentStatus());
-    })();
+    getShopsWithCurrentStatus().then(setShops);
   }, []);
 
   useEffect(() => {
@@ -90,7 +86,7 @@ function ShopsList() {
   return (
     <div className="flex flex-col gap-4">
       {toastShopName && (
-        <div className="fixed inset-x-4 top-16 z-30 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
+        <div className="fixed inset-x-4 top-16 z-30 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-base font-medium text-white shadow-lg">
           <span>✓</span>
           <span>
             {toastShopName} — {t("paymentRecorded")}
@@ -102,7 +98,7 @@ function ShopsList() {
         <h2 className="text-xl font-semibold">{t("allShops")}</h2>
         <Link
           href="/shops/new"
-          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)]"
+          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)]"
         >
           + {t("addShop")}
         </Link>
@@ -116,8 +112,14 @@ function ShopsList() {
         className="h-12 w-full rounded-lg border border-black/[.12] bg-transparent px-4 text-base focus:border-black/[.3] focus:outline-none dark:border-white/[.15] dark:focus:border-white/[.4]"
       />
 
-      {shops !== null && grouped.length === 0 && (
-        <p className="py-8 text-center opacity-60">{t("noResults")}</p>
+      {shops === null && <ShopsListSkeleton />}
+
+      {shops !== null && shops.length === 0 && (
+        <p className="py-8 text-center text-base opacity-60">{t("noShopsYet")}</p>
+      )}
+
+      {shops !== null && shops.length > 0 && grouped.length === 0 && (
+        <p className="py-8 text-center text-base opacity-60">{t("noResults")}</p>
       )}
 
       {grouped.map(([area, areaShops]) => (
@@ -126,9 +128,9 @@ function ShopsList() {
           open
           className="rounded-lg border border-black/[.08] dark:border-white/[.12]"
         >
-          <summary className="flex min-h-[44px] cursor-pointer select-none items-center px-4 py-3 text-base font-semibold">
+          <summary className="flex min-h-[48px] cursor-pointer select-none items-center px-4 py-3 text-base font-semibold">
             {area}
-            <span className="ml-2 text-sm font-normal opacity-50">
+            <span className="ml-2 text-base font-normal opacity-50">
               ({areaShops.length})
             </span>
           </summary>
@@ -136,7 +138,7 @@ function ShopsList() {
             {areaShops.map((shop) => (
               <li
                 key={shop.id}
-                className="flex min-h-[56px] items-center gap-2 py-2 pl-4 pr-3"
+                className="flex min-h-[60px] items-center gap-2 py-2 pl-4 pr-3"
               >
                 <Link
                   href={`/shops/${shop.id}`}
@@ -145,7 +147,7 @@ function ShopsList() {
                   <span className="truncate text-base font-medium">
                     {shop.name}
                   </span>
-                  <span className="truncate text-sm opacity-60">
+                  <span className="truncate text-base opacity-60">
                     {shop.tenant ? shop.tenant.name : t("vacant")}
                   </span>
                 </Link>
@@ -158,7 +160,7 @@ function ShopsList() {
                     onClick={() => handleMarkAsPaid(shop)}
                     disabled={markingId === shop.id}
                     aria-label={t("markAsPaid")}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg disabled:opacity-40 dark:border-white/[.15]"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-xl disabled:opacity-40 dark:border-white/[.15]"
                   >
                     ✓
                   </button>
@@ -168,7 +170,7 @@ function ShopsList() {
                   <Link
                     href={`/payments/new?shopId=${shop.id}`}
                     aria-label={t("addPayment")}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-base font-semibold dark:border-white/[.15]"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg font-semibold dark:border-white/[.15]"
                   >
                     ₹
                   </Link>
@@ -177,6 +179,37 @@ function ShopsList() {
             ))}
           </ul>
         </details>
+      ))}
+    </div>
+  );
+}
+
+function ShopsListSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      {[0, 1].map((g) => (
+        <div
+          key={g}
+          className="rounded-lg border border-black/[.08] dark:border-white/[.12]"
+        >
+          <div className="flex min-h-[48px] items-center px-4 py-3">
+            <div className="h-4 w-24 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+          </div>
+          <div className="divide-y divide-black/[.06] dark:divide-white/[.08]">
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="flex min-h-[60px] items-center gap-3 px-4 py-3"
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="h-4 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+                </div>
+                <div className="h-6 w-16 shrink-0 animate-pulse rounded-full bg-black/[.06] dark:bg-white/[.08]" />
+              </div>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );

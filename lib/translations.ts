@@ -66,6 +66,18 @@ export const translations = {
   sendReminder: { en: "Send Reminder", mr: "स्मरणपत्र पाठवा" },
   noPhoneOnFile: { en: "No phone number on file", mr: "फोन नंबर नोंदवलेला नाही" },
   done: { en: "Done", mr: "पूर्ण झाले" },
+  welcomeTitle: { en: "Welcome to BhadeBook", mr: "BhadeBook मध्ये आपले स्वागत आहे" },
+  welcomeBody: {
+    en: "Track rent from all your shops in one place. Let's add your first shop to get started.",
+    mr: "तुमच्या सर्व दुकानांचे भाडे एकाच ठिकाणी सांभाळा. सुरुवात करण्यासाठी तुमचे पहिले दुकान जोडूया.",
+  },
+  noShopsYet: { en: "No shops yet", mr: "अजून कोणतेही दुकान नाही" },
+  removeTenant: { en: "Remove Tenant", mr: "भाडेकरू काढा" },
+  deleteShop: { en: "Delete Shop", mr: "दुकान हटवा" },
+  delete: { en: "Delete", mr: "हटवा" },
+  areYouSure: { en: "Are you sure?", mr: "तुम्हाला खात्री आहे का?" },
+  loading: { en: "Loading…", mr: "लोड होत आहे…" },
+  switchLanguage: { en: "Switch language", mr: "भाषा बदला" },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {

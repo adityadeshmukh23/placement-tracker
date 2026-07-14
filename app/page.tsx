@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { currentMonth, getShopsWithCurrentStatus } from "@/lib/db";
-import { seedIfEmpty } from "@/lib/seed";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
 import {
@@ -29,10 +28,7 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
 
   useEffect(() => {
-    (async () => {
-      await seedIfEmpty();
-      setShops(await getShopsWithCurrentStatus());
-    })();
+    getShopsWithCurrentStatus().then(setShops);
   }, []);
 
   const occupied = useMemo(
@@ -70,6 +66,19 @@ export default function Home() {
     ];
   }, [shops, viewMode, occupied, vacant]);
 
+  if (shops === null) {
+    return (
+      <div className="flex flex-col gap-5">
+        <SummaryCardSkeleton />
+        <ListSkeleton />
+      </div>
+    );
+  }
+
+  if (shops.length === 0) {
+    return <OnboardingEmptyState t={t} />;
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <SummaryCard
@@ -77,7 +86,6 @@ export default function Home() {
         totalPending={summary.totalPending}
         paidCount={summary.paidCount}
         unpaidCount={summary.unpaidCount}
-        loading={shops === null}
         t={t}
       />
 
@@ -86,28 +94,44 @@ export default function Home() {
         <Link
           href="/shops"
           aria-label={t("search")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-lg dark:border-white/[.15]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
         >
           🔍
         </Link>
         <Link
           href="/reports"
           aria-label={t("reports")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-lg dark:border-white/[.15]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
         >
           📊
         </Link>
       </div>
 
-      {shops === null ? (
-        <ListSkeleton />
-      ) : (
-        <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
-          {listShops.map((shop) => (
-            <ShopRow key={shop.id} shop={shop} t={t} language={language} />
-          ))}
-        </ul>
-      )}
+      <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
+        {listShops.map((shop) => (
+          <ShopRow key={shop.id} shop={shop} t={t} language={language} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function OnboardingEmptyState({ t }: { t: T }) {
+  return (
+    <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-black/[.15] px-6 py-12 text-center dark:border-white/[.2]">
+      <span className="text-5xl" aria-hidden>
+        🏠
+      </span>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xl font-semibold">{t("welcomeTitle")}</h2>
+        <p className="text-base opacity-70">{t("welcomeBody")}</p>
+      </div>
+      <Link
+        href="/shops/new"
+        className="flex h-14 w-full items-center justify-center rounded-lg bg-[var(--foreground)] px-6 text-base font-semibold text-[var(--background)]"
+      >
+        + {t("addShop")}
+      </Link>
     </div>
   );
 }
@@ -117,55 +141,57 @@ function SummaryCard({
   totalPending,
   paidCount,
   unpaidCount,
-  loading,
   t,
 }: {
   totalCollected: number;
   totalPending: number;
   paidCount: number;
   unpaidCount: number;
-  loading: boolean;
   t: T;
 }) {
   return (
     <section className="rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
-      <p className="mb-3 text-sm font-medium opacity-60">{t("thisMonth")}</p>
-      {loading ? (
-        <div className="flex flex-col gap-3">
-          <div className="h-9 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
-          <div className="h-9 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+      <p className="mb-3 text-base font-medium opacity-60">{t("thisMonth")}</p>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm uppercase tracking-wide opacity-50">
+            {t("totalCollected")}
+          </p>
+          <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+            ₹{totalCollected.toLocaleString("en-IN")}
+          </p>
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-wide opacity-50">
-                {t("totalCollected")}
-              </p>
-              <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                ₹{totalCollected.toLocaleString("en-IN")}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide opacity-50">
-                {t("totalPending")}
-              </p>
-              <p className="text-3xl font-bold text-red-600 dark:text-red-400">
-                ₹{totalPending.toLocaleString("en-IN")}
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center gap-4 border-t border-black/[.06] pt-4 text-sm dark:border-white/[.08]">
-            <span className="font-semibold text-green-700 dark:text-green-400">
-              {paidCount} {t("paid")}
-            </span>
-            <span className="opacity-30">|</span>
-            <span className="font-semibold text-red-700 dark:text-red-400">
-              {unpaidCount} {t("unpaid")}
-            </span>
-          </div>
-        </>
-      )}
+        <div>
+          <p className="text-sm uppercase tracking-wide opacity-50">
+            {t("totalPending")}
+          </p>
+          <p className="text-3xl font-bold text-red-600 dark:text-red-400">
+            ₹{totalPending.toLocaleString("en-IN")}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-4 border-t border-black/[.06] pt-4 text-base dark:border-white/[.08]">
+        <span className="font-semibold text-green-700 dark:text-green-400">
+          {paidCount} {t("paid")}
+        </span>
+        <span className="opacity-30">|</span>
+        <span className="font-semibold text-red-700 dark:text-red-400">
+          {unpaidCount} {t("unpaid")}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function SummaryCardSkeleton() {
+  return (
+    <section className="rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
+      <div className="mb-3 h-5 w-24 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="h-9 w-28 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+        <div className="h-9 w-28 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+      </div>
+      <div className="mt-4 h-5 w-40 animate-pulse rounded bg-black/[.06] pt-0 dark:bg-white/[.08]" />
     </section>
   );
 }
@@ -186,7 +212,7 @@ function ViewToggle({
           key={m}
           type="button"
           onClick={() => onChange(m)}
-          className={`h-9 flex-1 rounded-md text-sm font-medium ${
+          className={`h-11 flex-1 rounded-md text-base font-medium ${
             mode === m
               ? "bg-[var(--foreground)] text-[var(--background)]"
               : "opacity-60"
@@ -230,13 +256,13 @@ function ShopRow({
   }
 
   return (
-    <li className="flex min-h-[56px] items-center gap-2 py-2 pl-4 pr-3">
+    <li className="flex min-h-[60px] items-center gap-2 py-2 pl-4 pr-3">
       <Link
         href={href}
         className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 rounded-md py-1 active:bg-black/[.03] dark:active:bg-white/[.05]"
       >
         <span className="truncate text-base font-medium">{shop.name}</span>
-        <span className="truncate text-sm opacity-60">
+        <span className="truncate text-base opacity-60">
           {shop.tenant ? shop.tenant.name : t("vacant")}
           {shop.tenant?.type === "family" ? ` · ${t("family")}` : ""}
         </span>
@@ -247,7 +273,7 @@ function ShopRow({
           type="button"
           onClick={handleSendReminder}
           aria-label={t("sendReminder")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-xl dark:border-white/[.15]"
         >
           💬
         </button>
@@ -260,12 +286,12 @@ function ListSkeleton() {
   return (
     <div className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="flex min-h-[56px] items-center gap-3 px-4 py-3">
+        <div key={i} className="flex min-h-[60px] items-center gap-3 px-4 py-3">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <div className="h-4 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
-            <div className="h-3 w-20 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+            <div className="h-4 w-20 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
           </div>
-          <div className="h-5 w-14 shrink-0 animate-pulse rounded-full bg-black/[.06] dark:bg-white/[.08]" />
+          <div className="h-6 w-16 shrink-0 animate-pulse rounded-full bg-black/[.06] dark:bg-white/[.08]" />
         </div>
       ))}
     </div>

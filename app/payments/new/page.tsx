@@ -139,7 +139,7 @@ function AddPaymentForm() {
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-black/[.08] p-6 text-center dark:border-white/[.12]">
           <span className="text-3xl">✓</span>
           <p className="text-base font-semibold">{t("paymentRecorded")}</p>
-          <p className="text-sm opacity-60">
+          <p className="text-base opacity-60">
             {savedPayment.shopName} · ₹{savedPayment.amount.toLocaleString("en-IN")}
           </p>
         </div>
@@ -153,7 +153,7 @@ function AddPaymentForm() {
             💬 {t("sendReceipt")}
           </button>
         ) : (
-          <p className="text-center text-sm opacity-50">{t("noPhoneOnFile")}</p>
+          <p className="text-center text-base opacity-50">{t("noPhoneOnFile")}</p>
         )}
 
         <button
@@ -182,8 +182,10 @@ function AddPaymentForm() {
           className="h-12 w-full rounded-lg border border-black/[.12] bg-transparent px-4 text-base focus:border-black/[.3] focus:outline-none dark:border-white/[.15] dark:focus:border-white/[.4]"
         />
 
+        {shops === null && <ShopPickerSkeleton />}
+
         {shops !== null && filteredShops.length === 0 && (
-          <p className="py-8 text-center opacity-60">{t("noResults")}</p>
+          <p className="py-8 text-center text-base opacity-60">{t("noResults")}</p>
         )}
 
         <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
@@ -192,13 +194,13 @@ function AddPaymentForm() {
               <button
                 type="button"
                 onClick={() => setSelectedShopId(shop.id!)}
-                className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left active:bg-black/[.03] dark:active:bg-white/[.05]"
+                className="flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left active:bg-black/[.03] dark:active:bg-white/[.05]"
               >
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-base font-medium">
                     {shop.name}
                   </span>
-                  <span className="truncate text-sm opacity-60">
+                  <span className="truncate text-base opacity-60">
                     {shop.tenant?.name}
                   </span>
                 </div>
@@ -218,7 +220,7 @@ function AddPaymentForm() {
         onClick={() =>
           preselectedShopId ? router.back() : setSelectedShopId(null)
         }
-        className="flex h-11 w-fit items-center text-sm opacity-70"
+        className="flex h-11 w-fit items-center text-base opacity-70"
       >
         ← {t("back")}
       </button>
@@ -226,7 +228,7 @@ function AddPaymentForm() {
       <div>
         <h2 className="text-xl font-semibold">{t("addPayment")}</h2>
         {selectedShop && (
-          <p className="text-sm opacity-60">
+          <p className="text-base opacity-60">
             {selectedShop.name} · {selectedShop.tenant?.name}
           </p>
         )}
@@ -252,7 +254,7 @@ function AddPaymentForm() {
       </FormField>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium opacity-70">
+        <span className="text-base font-medium opacity-70">
           {t("paymentMode")}
         </span>
         <div className="flex gap-2">
@@ -277,7 +279,7 @@ function AddPaymentForm() {
         <button
           type="button"
           onClick={() => setNotesOpen(true)}
-          className="flex h-11 w-fit items-center text-sm font-medium opacity-70"
+          className="flex h-11 w-fit items-center text-base font-medium opacity-70"
         >
           + {t("addNote")}
         </button>
@@ -299,8 +301,21 @@ function AddPaymentForm() {
         onClick={handleSave}
         className="h-14 rounded-lg bg-[var(--foreground)] text-base font-semibold text-[var(--background)] disabled:opacity-40"
       >
-        {t("save")}
+        {saving ? t("loading") : t("save")}
       </button>
+    </div>
+  );
+}
+
+function ShopPickerSkeleton() {
+  return (
+    <div className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex min-h-[60px] flex-col justify-center gap-1.5 px-4 py-3">
+          <div className="h-4 w-32 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+          <div className="h-4 w-20 animate-pulse rounded bg-black/[.06] dark:bg-white/[.08]" />
+        </div>
+      ))}
     </div>
   );
 }

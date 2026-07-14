@@ -15,7 +15,7 @@ export function StatusPill({ shop }: { shop: ShopWithStatus }) {
 
   if (!shop.tenant) {
     return (
-      <span className="shrink-0 rounded-full bg-black/[.05] px-3 py-1 text-xs font-medium opacity-60 dark:bg-white/[.08]">
+      <span className="shrink-0 rounded-full bg-black/[.05] px-3 py-1.5 text-sm font-medium opacity-60 dark:bg-white/[.08]">
         {t("vacant")}
       </span>
     );
@@ -34,7 +34,7 @@ export function StatusPill({ shop }: { shop: ShopWithStatus }) {
 
   return (
     <span
-      className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${colorClass}`}
+      className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${colorClass}`}
     >
       {t(shop.status)}
     </span>

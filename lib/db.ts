@@ -188,6 +188,28 @@ export async function recordPayment(
   });
 }
 
+/** Permanently deletes a shop along with all of its tenants and payments. */
+export async function deleteShop(shopId: number): Promise<void> {
+  await db.transaction("rw", db.shops, db.tenants, db.payments, async () => {
+    await db.payments.where("shopId").equals(shopId).delete();
+    await db.tenants.where("shopId").equals(shopId).delete();
+    await db.shops.delete(shopId);
+  });
+}
+
+/**
+ * Ends a tenancy: the tenant is deactivated (not deleted) so the shop's
+ * payment history stays intact, and the shop becomes vacant again.
+ */
+export async function removeTenant(tenantId: number): Promise<void> {
+  await db.tenants.update(tenantId, { active: false });
+}
+
+/** Permanently deletes a single payment record. */
+export async function deletePayment(paymentId: number): Promise<void> {
+  await db.payments.delete(paymentId);
+}
+
 /** Every "YYYY-MM" month from `startMonth` to `endMonth`, inclusive. */
 function monthsBetween(startMonth: string, endMonth: string): string[] {
   const [startYear, startMonthNum] = startMonth.split("-").map(Number);

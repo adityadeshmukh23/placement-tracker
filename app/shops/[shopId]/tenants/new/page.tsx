@@ -45,14 +45,14 @@ export default function AddTenantPage({
       <button
         type="button"
         onClick={() => router.back()}
-        className="flex h-11 w-fit items-center text-sm opacity-70"
+        className="flex h-11 w-fit items-center text-base opacity-70"
       >
         ← {t("back")}
       </button>
 
       <div>
         <h2 className="text-xl font-semibold">{t("addTenant")}</h2>
-        {shop && <p className="text-sm opacity-60">{shop.name}</p>}
+        {shop && <p className="text-base opacity-60">{shop.name}</p>}
       </div>
 
       <FormField label={t("name")}>
@@ -75,7 +75,7 @@ export default function AddTenantPage({
       </FormField>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium opacity-70">
+        <span className="text-base font-medium opacity-70">
           {t("tenantType")}
         </span>
         <div className="flex gap-2">
@@ -98,7 +98,7 @@ export default function AddTenantPage({
         onClick={handleSave}
         className="h-14 rounded-lg bg-[var(--foreground)] text-base font-semibold text-[var(--background)] disabled:opacity-40"
       >
-        {t("save")}
+        {saving ? t("loading") : t("save")}
       </button>
     </div>
   );
