@@ -1,6 +1,6 @@
 {
-  "name": "BhadeBook",
-  "short_name": "BhadeBook",
+  "name": "Rental Book",
+  "short_name": "Rental Book",
   "description": "Track shop rent collection, tenants, and payment history.",
   "start_url": "/",
   "scope": "/",

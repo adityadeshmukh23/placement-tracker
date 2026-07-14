@@ -19,13 +19,13 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "BhadeBook",
+  title: "Rental Book",
   description: "Track shop rent collection, tenants, and payment history.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "BhadeBook",
+    title: "Rental Book",
   },
   icons: {
     icon: [

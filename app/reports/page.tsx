@@ -101,7 +101,7 @@ function MonthlyReport({ t }: { t: T }) {
       [t("totalCollected"), summary.totalCollected],
       [t("totalPending"), summary.totalPending],
     ];
-    downloadCsv(`bhadebook-${month}.csv`, rows);
+    downloadCsv(`rental-book-${month}.csv`, rows);
   }
 
   return (
@@ -223,7 +223,7 @@ function YearlyReport({ t }: { t: T }) {
       [],
       [t("total"), total],
     ];
-    downloadCsv(`bhadebook-${year}.csv`, rows);
+    downloadCsv(`rental-book-${year}.csv`, rows);
   }
 
   return (
