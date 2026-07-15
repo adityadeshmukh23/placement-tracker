@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Check, CheckCircle2, IndianRupee, Plus, Trash2 } from "lucide-react";
 import {
   currentMonth,
   deletePayment,
@@ -155,7 +156,9 @@ function ShopsList() {
           }`}
         >
           <span className="flex min-w-0 items-center gap-2">
-            {toast.kind !== "alreadyPaid" && <span>✓</span>}
+            {toast.kind !== "alreadyPaid" && (
+              <CheckCircle2 className="h-5 w-5 shrink-0" />
+            )}
             <span className="truncate">
               {toast.shopName} —{" "}
               {toast.kind === "alreadyPaid"
@@ -181,9 +184,10 @@ function ShopsList() {
         <h2 className="text-xl font-semibold">{t("allShops")}</h2>
         <Link
           href="/shops/new"
-          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)]"
+          className="flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)]"
         >
-          + {t("addShop")}
+          <Plus className="h-4 w-4" />
+          {t("addShop")}
         </Link>
       </div>
 
@@ -243,9 +247,9 @@ function ShopsList() {
                     onClick={() => handleMarkAsPaid(shop)}
                     disabled={markingId === shop.id}
                     aria-label={t("markAsPaid")}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-xl disabled:opacity-40 dark:border-white/[.15]"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] disabled:opacity-40 dark:border-white/[.15]"
                   >
-                    ✓
+                    <Check className="h-5 w-5" />
                   </button>
                 )}
 
@@ -257,17 +261,17 @@ function ShopsList() {
                       type="button"
                       onClick={() => setPendingUndo(shop.payments[0])}
                       aria-label={t("removeThisPayment")}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] dark:border-white/[.15]"
                     >
-                      🗑
+                      <Trash2 className="h-5 w-5" />
                     </button>
                   ) : (
                     <Link
                       href={`/shops/${shop.id}`}
                       aria-label={t("removeThisPayment")}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] dark:border-white/[.15]"
                     >
-                      🗑
+                      <Trash2 className="h-5 w-5" />
                     </Link>
                   ))}
 
@@ -275,9 +279,9 @@ function ShopsList() {
                   <Link
                     href={`/payments/new?shopId=${shop.id}&from=/shops`}
                     aria-label={t("addPayment")}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg font-semibold dark:border-white/[.15]"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] dark:border-white/[.15]"
                   >
-                    ₹
+                    <IndianRupee className="h-5 w-5" />
                   </Link>
                 )}
               </li>

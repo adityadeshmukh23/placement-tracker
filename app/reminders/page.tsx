@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, MessageCircle } from "lucide-react";
 import { currentMonth, getShopsWithCurrentStatus } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { buildReminderMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -121,7 +122,7 @@ export default function RemindersPage() {
         <div className="flex flex-col gap-5">
           <BackButton fallbackHref="/" />
           <div className="flex flex-col items-center gap-5 py-10 text-center">
-            <span className="text-4xl">✓</span>
+            <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
             <p className="text-lg font-semibold">{t("remindersDone")}</p>
             <button
               type="button"
@@ -154,7 +155,7 @@ export default function RemindersPage() {
           onClick={() => openReminderFor(current)}
           className="flex h-14 items-center justify-center gap-2 rounded-lg border border-black/[.12] text-base font-semibold dark:border-white/[.15]"
         >
-          💬 {t("openWhatsApp")}
+          <MessageCircle className="h-5 w-5" /> {t("openWhatsApp")}
         </button>
         <button
           type="button"

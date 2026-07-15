@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 
 /**
@@ -30,9 +31,10 @@ export function BackButton({ fallbackHref }: { fallbackHref: string }) {
     <button
       type="button"
       onClick={handleBack}
-      className="flex h-11 w-fit items-center text-base opacity-70"
+      className="flex h-11 w-fit items-center gap-1.5 text-base opacity-70"
     >
-      ← {t("back")}
+      <ArrowLeft className="h-5 w-5" />
+      {t("back")}
     </button>
   );
 }

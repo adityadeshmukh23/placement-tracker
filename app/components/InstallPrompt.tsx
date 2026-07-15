@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 
 const DISMISSED_KEY = "bhadebook:install-dismissed";
@@ -78,9 +79,9 @@ export function InstallPrompt() {
           type="button"
           onClick={handleDismiss}
           aria-label={t("dismiss")}
-          className="flex h-11 w-11 items-center justify-center rounded-md text-xl opacity-60"
+          className="flex h-11 w-11 items-center justify-center rounded-md opacity-60"
         >
-          ×
+          <X className="h-5 w-5" />
         </button>
       </div>
     </div>

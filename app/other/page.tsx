@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { getOtherTransactions } from "@/lib/db";
 import { SYNCED_EVENT } from "@/lib/sync";
 import { useTranslation } from "@/lib/useTranslation";
@@ -89,15 +90,16 @@ export default function OtherRecordsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <BackButton fallbackHref="/" />
+      <BackButton fallbackHref="/more" />
 
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">{t("otherRecords")}</h2>
         <Link
           href="/other/new"
-          className="flex h-11 shrink-0 items-center rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)]"
+          className="flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--foreground)] px-4 text-base font-semibold text-[var(--background)]"
         >
-          + {t("otherTransaction")}
+          <Plus className="h-4 w-4" />
+          {t("otherTransaction")}
         </Link>
       </div>
 

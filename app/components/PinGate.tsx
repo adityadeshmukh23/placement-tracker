@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Lock } from "lucide-react";
 import { useSync } from "@/lib/SyncContext";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -36,9 +37,7 @@ export function PinGate() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--background)] px-6">
       <div className="flex w-full max-w-sm flex-col items-center gap-6">
-        <span className="text-5xl" aria-hidden>
-          🔒
-        </span>
+        <Lock className="h-12 w-12" aria-hidden />
         <div className="flex flex-col items-center gap-2 text-center">
           <h2 className="text-xl font-semibold">{t("enterPin")}</h2>
           <p className="text-base opacity-70">{t("pinGateSubtitle")}</p>

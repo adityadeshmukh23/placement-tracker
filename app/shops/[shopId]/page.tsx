@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MessageCircle, Pencil, Phone, Plus } from "lucide-react";
 import {
   currentMonth,
   deleteShop,
@@ -112,9 +113,9 @@ export default function ShopDetailPage({
               type="button"
               onClick={() => setEditRentOpen(true)}
               aria-label={t("editMonthlyRent")}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base opacity-60"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full opacity-60"
             >
-              ✏️
+              <Pencil className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -155,7 +156,7 @@ export default function ShopDetailPage({
                     : "border-black/[.08] opacity-30 dark:border-white/[.08]"
                 }`}
               >
-                📞 {t("call")}
+                <Phone className="h-4 w-4" /> {t("call")}
               </a>
               {shop.status !== "paid" && (
                 <button
@@ -164,7 +165,7 @@ export default function ShopDetailPage({
                   onClick={handleSendReminder}
                   className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-black/[.12] text-base font-semibold disabled:opacity-30 dark:border-white/[.15]"
                 >
-                  💬 {t("sendReminder")}
+                  <MessageCircle className="h-4 w-4" /> {t("sendReminder")}
                 </button>
               )}
             </div>
@@ -177,9 +178,10 @@ export default function ShopDetailPage({
         <div className="mt-4 flex flex-col gap-2">
           <Link
             href={`/shops/${shopId}/tenants/new`}
-            className="flex h-12 items-center justify-center rounded-lg border border-black/[.12] text-base font-semibold dark:border-white/[.15]"
+            className="flex h-12 items-center justify-center gap-1.5 rounded-lg border border-black/[.12] text-base font-semibold dark:border-white/[.15]"
           >
-            + {t("addTenant")}
+            <Plus className="h-4 w-4" />
+            {t("addTenant")}
           </Link>
           {shop.tenant && (
             <button

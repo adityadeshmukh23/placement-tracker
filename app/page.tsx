@@ -3,6 +3,14 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  CheckCircle2,
+  MessageCircle,
+  Phone,
+  Plus,
+  Store,
+  Trash2,
+} from "lucide-react";
 import { currentMonth, deletePayment, getShopsWithCurrentStatus } from "@/lib/db";
 import { SYNCED_EVENT } from "@/lib/sync";
 import { useTranslation } from "@/lib/useTranslation";
@@ -144,7 +152,7 @@ function HomeInner() {
     <div className="flex flex-col gap-5">
       {paymentSavedToast && (
         <div className="fixed inset-x-4 top-16 z-30 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-base font-medium text-white shadow-lg">
-          <span>✓</span>
+          <CheckCircle2 className="h-5 w-5 shrink-0" />
           <span>
             {paymentSavedToast} — {t("paymentRecorded")}
           </span>
@@ -161,44 +169,17 @@ function HomeInner() {
         t={t}
       />
 
-      <div className="flex items-center gap-2">
-        <ViewToggle mode={viewMode} onChange={setViewMode} t={t} />
-        <Link
-          href="/shops"
-          aria-label={t("search")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
-        >
-          🔍
-        </Link>
-        <Link
-          href="/reports"
-          aria-label={t("reports")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
-        >
-          📊
-        </Link>
+      <ViewToggle mode={viewMode} onChange={setViewMode} t={t} />
+
+      {summary.unpaidCount > 0 && (
         <Link
           href="/reminders"
-          aria-label={t("sendReminders")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
+          className="flex h-14 items-center justify-center gap-2 rounded-lg border border-black/[.12] text-base font-semibold dark:border-white/[.15]"
         >
-          📣
+          <MessageCircle className="h-5 w-5" />
+          {t("sendReminders")} ({summary.unpaidCount})
         </Link>
-        <Link
-          href="/other"
-          aria-label={t("otherRecords")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
-        >
-          🧾
-        </Link>
-        <Link
-          href="/insights"
-          aria-label={t("insights")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
-        >
-          📈
-        </Link>
-      </div>
+      )}
 
       <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">
         {listShops.map((shop) => (
@@ -234,18 +215,17 @@ function HomeInner() {
 function OnboardingEmptyState({ t }: { t: T }) {
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-black/[.15] px-6 py-12 text-center dark:border-white/[.2]">
-      <span className="text-5xl" aria-hidden>
-        🏠
-      </span>
+      <Store className="h-12 w-12" aria-hidden />
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">{t("welcomeTitle")}</h2>
         <p className="text-base opacity-70">{t("welcomeBody")}</p>
       </div>
       <Link
         href="/shops/new"
-        className="flex h-14 w-full items-center justify-center rounded-lg bg-[var(--foreground)] px-6 text-base font-semibold text-[var(--background)]"
+        className="flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-[var(--foreground)] px-6 text-base font-semibold text-[var(--background)]"
       >
-        + {t("addShop")}
+        <Plus className="h-5 w-5" />
+        {t("addShop")}
       </Link>
     </div>
   );
@@ -394,13 +374,13 @@ function ShopRow({
           onClick={(e) => {
             if (!shop.tenant?.phone) e.preventDefault();
           }}
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-xl ${
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border ${
             shop.tenant?.phone
               ? "border-black/[.12] dark:border-white/[.15]"
               : "border-black/[.08] opacity-30 dark:border-white/[.08]"
           }`}
         >
-          📞
+          <Phone className="h-5 w-5" />
         </a>
       )}
       {showReminder && (
@@ -408,9 +388,9 @@ function ShopRow({
           type="button"
           onClick={handleSendReminder}
           aria-label={t("sendReminder")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-xl dark:border-white/[.15]"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] dark:border-white/[.15]"
         >
-          💬
+          <MessageCircle className="h-5 w-5" />
         </button>
       )}
       {shop.tenant &&
@@ -421,17 +401,17 @@ function ShopRow({
             type="button"
             onClick={() => onRequestUndo(shop.payments[0])}
             aria-label={t("removeThisPayment")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] dark:border-white/[.15]"
           >
-            🗑
+            <Trash2 className="h-5 w-5" />
           </button>
         ) : (
           <Link
             href={`/shops/${shop.id}`}
             aria-label={t("removeThisPayment")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-lg dark:border-white/[.15]"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] dark:border-white/[.15]"
           >
-            🗑
+            <Trash2 className="h-5 w-5" />
           </Link>
         ))}
     </li>

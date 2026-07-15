@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { AlertTriangle, Bell, ChevronRight, FileBarChart2, Star } from "lucide-react";
 import {
   buildHeadlineText,
   buildThisMonthSentence,
@@ -97,6 +99,17 @@ export default function InsightsPage() {
       <h2 className="text-xl font-semibold">{t("insights")}</h2>
       <RentScopeToggle scope={scope} onChange={setScope} />
 
+      <Link
+        href="/reports"
+        className="flex h-14 items-center justify-between gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
+      >
+        <span className="flex items-center gap-2">
+          <FileBarChart2 className="h-5 w-5" />
+          {t("viewDetailedReports")}
+        </span>
+        <ChevronRight className="h-5 w-5 opacity-40" />
+      </Link>
+
       {data === null ? (
         <InsightsSkeleton />
       ) : (
@@ -121,9 +134,7 @@ export default function InsightsPage() {
                     key={r.tenantId}
                     className="flex items-center gap-3 rounded-lg border border-black/[.08] px-4 py-3 dark:border-white/[.12]"
                   >
-                    <span className="text-xl" aria-hidden>
-                      ⭐
-                    </span>
+                    <Star className="h-5 w-5 shrink-0 text-amber-500" aria-hidden />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-base font-medium">
                         {r.shopName} · {r.tenantName}
@@ -154,9 +165,14 @@ export default function InsightsPage() {
                           : "border-red-600/20 bg-red-600/[.04] dark:border-red-400/20"
                       }`}
                     >
-                      <span className="text-xl" aria-hidden>
-                        {isFamily ? "🔔" : "⚠️"}
-                      </span>
+                      {isFamily ? (
+                        <Bell className="h-5 w-5 shrink-0 text-slate-500" aria-hidden />
+                      ) : (
+                        <AlertTriangle
+                          className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400"
+                          aria-hidden
+                        />
+                      )}
                       <div className="flex min-w-0 flex-col">
                         <span className="truncate text-base font-medium">
                           {a.shopName} · {a.tenantName}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { IndianRupee, Plus, Receipt, Store } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 
 export function Fab() {
@@ -24,9 +25,9 @@ export function Fab() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t("addPayment")}
-        className="fixed bottom-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--foreground)] text-3xl font-light leading-none text-[var(--background)] shadow-lg active:scale-95"
+        className="fixed bottom-20 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)] shadow-lg active:scale-95"
       >
-        +
+        <Plus className="h-7 w-7" strokeWidth={2.5} />
       </button>
 
       {open && (
@@ -44,9 +45,7 @@ export function Fab() {
                 onClick={() => setOpen(false)}
                 className="flex h-14 items-center gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
               >
-                <span className="text-xl" aria-hidden>
-                  ₹
-                </span>
+                <IndianRupee className="h-5 w-5 shrink-0" aria-hidden />
                 {t("recordPayment")}
               </Link>
               <Link
@@ -54,9 +53,7 @@ export function Fab() {
                 onClick={() => setOpen(false)}
                 className="flex h-14 items-center gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
               >
-                <span className="text-xl" aria-hidden>
-                  🏠
-                </span>
+                <Store className="h-5 w-5 shrink-0" aria-hidden />
                 {t("addNewShop")}
               </Link>
               <Link
@@ -64,9 +61,7 @@ export function Fab() {
                 onClick={() => setOpen(false)}
                 className="flex h-14 items-center gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
               >
-                <span className="text-xl" aria-hidden>
-                  🧾
-                </span>
+                <Receipt className="h-5 w-5 shrink-0" aria-hidden />
                 {t("otherTransaction")}
               </Link>
               <button

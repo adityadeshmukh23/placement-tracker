@@ -25,7 +25,7 @@ export default function ReportsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <BackButton fallbackHref="/" />
+      <BackButton fallbackHref="/insights" />
 
       <h2 className="text-xl font-semibold">{t("reports")}</h2>
 

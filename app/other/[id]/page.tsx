@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { db, deleteOtherTransaction, updateOtherTransaction } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { downscaleImageFile } from "@/lib/image";
@@ -145,9 +146,10 @@ export default function OtherTransactionDetailPage({
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="flex h-11 w-fit items-center text-base opacity-70"
+          className="flex h-11 w-fit items-center gap-1.5 text-base opacity-70"
         >
-          ← {t("back")}
+          <ArrowLeft className="h-5 w-5" />
+          {t("back")}
         </button>
 
         <h2 className="text-xl font-semibold">{t("edit")}</h2>

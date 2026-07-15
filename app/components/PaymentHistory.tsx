@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Share2, Trash2 } from "lucide-react";
 import { deletePayment, getShopLedger } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
@@ -112,9 +113,9 @@ export function PaymentHistory({
               type="button"
               onClick={handleShare}
               aria-label={t("share")}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/[.12] text-xl dark:border-white/[.15]"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/[.12] dark:border-white/[.15]"
             >
-              📤
+              <Share2 className="h-5 w-5" />
             </button>
           )}
         </div>
@@ -225,9 +226,9 @@ function LedgerRowView({
         type="button"
         onClick={() => onRequestDelete(payment)}
         aria-label={t("delete")}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg opacity-50"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full opacity-50"
       >
-        🗑
+        <Trash2 className="h-5 w-5" />
       </button>
     </li>
   );

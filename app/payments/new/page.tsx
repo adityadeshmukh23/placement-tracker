@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, CheckCircle2, MessageCircle, Plus } from "lucide-react";
 import {
   currentMonth,
   getShopsWithCurrentStatus,
@@ -173,7 +174,7 @@ function AddPaymentForm() {
     return (
       <div className="flex flex-col gap-5">
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-black/[.08] p-6 text-center dark:border-white/[.12]">
-          <span className="text-3xl">✓</span>
+          <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
           <p className="text-base font-semibold">{t("paymentRecorded")}</p>
           <p className="text-base opacity-60">
             {savedPayment.shopName} · ₹{savedPayment.amount.toLocaleString("en-IN")}
@@ -186,7 +187,7 @@ function AddPaymentForm() {
             onClick={handleSendReceipt}
             className="flex h-14 items-center justify-center gap-2 rounded-lg border border-green-600/30 bg-green-600/10 text-base font-semibold text-green-700 dark:text-green-400"
           >
-            💬 {t("sendReceipt")}
+            <MessageCircle className="h-5 w-5" /> {t("sendReceipt")}
           </button>
         ) : (
           <p className="text-center text-base opacity-50">{t("noPhoneOnFile")}</p>
@@ -256,9 +257,10 @@ function AddPaymentForm() {
       <button
         type="button"
         onClick={handleBackFromForm}
-        className="flex h-11 w-fit items-center text-base opacity-70"
+        className="flex h-11 w-fit items-center gap-1.5 text-base opacity-70"
       >
-        ← {t("back")}
+        <ArrowLeft className="h-5 w-5" />
+        {t("back")}
       </button>
 
       <div>
@@ -334,9 +336,10 @@ function AddPaymentForm() {
         <button
           type="button"
           onClick={() => setNotesOpen(true)}
-          className="flex h-11 w-fit items-center text-base font-medium opacity-70"
+          className="flex h-11 w-fit items-center gap-1.5 text-base font-medium opacity-70"
         >
-          + {t("addNote")}
+          <Plus className="h-4 w-4" />
+          {t("addNote")}
         </button>
       ) : (
         <FormField label={t("notes")}>

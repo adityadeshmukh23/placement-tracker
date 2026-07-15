@@ -163,6 +163,9 @@ export const translations = {
     en: "No shops need attention right now.",
     mr: "सध्या कोणत्याही दुकानाकडे लक्ष देण्याची गरज नाही.",
   },
+  navShops: { en: "Shops", mr: "दुकाने" },
+  more: { en: "More", mr: "अधिक" },
+  viewDetailedReports: { en: "Detailed Reports", mr: "सविस्तर अहवाल" },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {

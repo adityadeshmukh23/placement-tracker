@@ -7,6 +7,7 @@ import { LanguageToggle } from "./components/LanguageToggle";
 import { SyncBar } from "./components/SyncBar";
 import { PinGate } from "./components/PinGate";
 import { Fab } from "./components/Fab";
+import { BottomNav } from "./components/BottomNav";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { ServiceWorkerRegister } from "./components/ServiceWorkerRegister";
 
@@ -69,8 +70,9 @@ export default function RootLayout({
             </header>
             <SyncBar />
             <InstallPrompt />
-            <main className="flex-1 px-4 py-4 pb-24">{children}</main>
+            <main className="flex-1 px-4 py-4 pb-28">{children}</main>
             <Fab />
+            <BottomNav />
           </SyncProvider>
         </LanguageProvider>
       </body>
