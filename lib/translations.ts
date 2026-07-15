@@ -205,6 +205,29 @@ export const translations = {
   hideAmounts: { en: "Hide amounts", mr: "रक्कम लपवा" },
   showAmounts: { en: "Show amounts", mr: "रक्कम दाखवा" },
   openFamilyDocuments: { en: "Open Family Documents", mr: "कौटुंबिक कागदपत्रे उघडा" },
+  changePin: { en: "Change PIN", mr: "पिन बदला" },
+  currentPin: { en: "Current PIN", mr: "सध्याचा पिन" },
+  newPin: { en: "New PIN", mr: "नवीन पिन" },
+  confirmNewPin: { en: "Confirm New PIN", mr: "नवीन पिन पुन्हा टाका" },
+  pinsDontMatch: { en: "PINs don't match", mr: "पिन जुळत नाहीत" },
+  pinTooShort: {
+    en: "PIN must be at least 6 characters",
+    mr: "पिन किमान ६ अक्षरांचा असावा",
+  },
+  wrongCurrentPin: { en: "Current PIN is incorrect.", mr: "सध्याचा पिन चुकीचा आहे." },
+  pinChanged: { en: "PIN changed successfully", mr: "पिन यशस्वीरित्या बदलला" },
+  pinChangedReminder: {
+    en: "Remember to tell the rest of the household the new PIN — they'll need to enter it manually on their own devices.",
+    mr: "घरातील इतरांना नवीन पिन सांगायला विसरू नका — त्यांना तो त्यांच्या स्वतःच्या डिव्हाइसवर स्वतः टाकावा लागेल.",
+  },
+  genericChangePinError: {
+    en: "Something went wrong. Please try again.",
+    mr: "काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.",
+  },
+  changePinRequiresSync: {
+    en: "Cloud sync isn't set up, so there's no shared PIN to change.",
+    mr: "क्लाउड सिंक सेट केलेले नाही, त्यामुळे बदलण्यासाठी कोणताही सामायिक पिन नाही.",
+  },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {

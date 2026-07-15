@@ -15,6 +15,7 @@ import {
   onAuthChange,
   signInWithPin as sbSignInWithPin,
   signOut as sbSignOut,
+  updatePassword as sbUpdatePassword,
 } from "./supabase";
 import { sync } from "./sync";
 import { LOCAL_CHANGE_EVENT } from "./db";
@@ -44,6 +45,10 @@ export function getRememberedPin(): string | null {
 
 export type SyncUiStatus = "idle" | "syncing" | "synced" | "offline" | "error";
 
+/** Sentinel `error` value from `changePin` meaning the *current* PIN was wrong
+ * (as opposed to some other failure updating the new one). */
+export const WRONG_CURRENT_PIN = "wrong-current-pin";
+
 interface SyncContextValue {
   /** Whether Supabase env vars are present at all. */
   configured: boolean;
@@ -55,6 +60,17 @@ interface SyncContextValue {
   openPinGate: () => void;
   dismissPinGate: () => void;
   signInWithPin: (pin: string) => Promise<{ error: string | null }>;
+  /**
+   * Verifies `currentPin` (via the same path as a normal sign-in), then — only
+   * if that succeeds — changes the shared account's password to `newPin` and
+   * updates what's remembered on this device. Returns `{ error:
+   * WRONG_CURRENT_PIN }` specifically when step one fails, so the caller can
+   * show a targeted message rather than a generic one.
+   */
+  changePin: (
+    currentPin: string,
+    newPin: string
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   syncNow: () => void;
 }
@@ -141,6 +157,18 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     return res;
   }, []);
 
+  const changePin = useCallback(async (currentPin: string, newPin: string) => {
+    const verify = await sbSignInWithPin(currentPin);
+    if (verify.error) return { error: WRONG_CURRENT_PIN };
+
+    const update = await sbUpdatePassword(newPin);
+    if (update.error) return { error: update.error };
+
+    if (typeof localStorage !== "undefined") localStorage.setItem(PIN_KEY, newPin);
+    setSession(await getSession());
+    return { error: null };
+  }, []);
+
   const signOut = useCallback(async () => {
     await sbSignOut();
     if (typeof localStorage !== "undefined") localStorage.removeItem(PIN_KEY);
@@ -162,6 +190,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         openPinGate,
         dismissPinGate,
         signInWithPin,
+        changePin,
         signOut,
         syncNow: runSync,
       }}

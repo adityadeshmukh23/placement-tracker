@@ -47,9 +47,13 @@ account by entering it. Nobody manages individual usernames.
 5. (Optional but recommended: under **Authentication → Providers → Email**, turn
    *off* "Enable sign-ups" so no one else can self-register.)
 
-To change the PIN later, edit this user's password in the Supabase dashboard;
-each phone will re-prompt for the new PIN the next time its session expires (or
-after signing out).
+To change the PIN later, use **More → Change PIN** in the app itself (it asks
+for the current PIN first, then the new one twice) — no dashboard needed. You
+can still edit the user's password directly in the Supabase dashboard if you
+prefer; either way, tell everyone else in the household the new PIN yourself,
+since the app has no way to notify other devices automatically. Devices that
+are still signed in keep working until they next need to re-authenticate;
+after that, only the new PIN is accepted.
 
 ## 4. Point the app at your project
 

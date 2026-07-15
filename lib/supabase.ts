@@ -44,6 +44,21 @@ export async function signInWithPin(
   return { error: error?.message ?? null };
 }
 
+/**
+ * Changes the shared account's password — i.e. the PIN everyone enters.
+ * Supabase hashes and stores it server-side (never plaintext, never visible
+ * to the client); there's no separate custom hash to manage here. Requires
+ * an already-authenticated session, which the caller establishes by
+ * re-verifying the current PIN first (see SyncContext's `changePin`).
+ */
+export async function updatePassword(
+  newPin: string
+): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Sync is not configured." };
+  const { error } = await supabase.auth.updateUser({ password: newPin });
+  return { error: error?.message ?? null };
+}
+
 export async function signOut(): Promise<void> {
   await supabase?.auth.signOut();
 }
