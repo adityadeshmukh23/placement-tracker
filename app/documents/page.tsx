@@ -36,11 +36,6 @@ const CATEGORY_KEY: Record<DocumentCategory, TranslationKey> = {
   other: "other",
 };
 
-function categoryLabel(doc: FamilyDocument, t: (k: TranslationKey) => string): string {
-  if (doc.category === "other" && doc.categoryOther) return doc.categoryOther;
-  return t(CATEGORY_KEY[doc.category]);
-}
-
 function ownerLabel(doc: FamilyDocument, t: (k: TranslationKey) => string): string {
   if (doc.belongsTo === "other" && doc.belongsToOther) return doc.belongsToOther;
   if (doc.belongsTo === "father") return t("ownerFather");
