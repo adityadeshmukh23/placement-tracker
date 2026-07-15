@@ -173,6 +173,57 @@ export interface VacantShopNote {
   monthsVacant: number;
 }
 
+// --- Family Documents ----------------------------------------------------
+
+export type DocumentCategory =
+  | "identity"
+  | "property"
+  | "insurance"
+  | "medical"
+  | "financial"
+  | "certificates"
+  | "vehicle"
+  | "other";
+
+export type DocumentOwner = "father" | "mother" | "family" | "other";
+
+export type DocumentFileType = "image" | "pdf";
+
+/**
+ * A scanned/photographed family document. `fileUrl` is the object's path
+ * within the private "documents" Supabase Storage bucket (not a permanent
+ * public URL) — viewing/downloading fetches a short-lived signed URL for it
+ * on demand. This feature has no offline-only fallback: the file itself only
+ * exists in Storage, so uploading requires cloud sync to be configured.
+ */
+export interface FamilyDocument extends SyncFields {
+  title: string;
+  category: DocumentCategory;
+  /** Free text, used only when `category` is `"other"`. */
+  categoryOther?: string;
+  belongsTo: DocumentOwner;
+  /** Free text, used only when `belongsTo` is `"other"`. */
+  belongsToOther?: string;
+  fileUrl: string;
+  fileType: DocumentFileType;
+  expiryDate?: Date;
+  notes?: string;
+  /** Name of whoever uploaded it, captured once at upload from this device. */
+  uploadedBy: string;
+  /**
+   * Defaults to true for Identity/Financial categories at upload time
+   * (overridable there); not yet enforced anywhere — the blur/lock behavior
+   * that reads this flag is a separate follow-up phase.
+   */
+  sensitive: boolean;
+}
+
+/** Composable filter for `getDocuments` — keyword matches title/category/owner. */
+export interface DocumentFilter {
+  keyword?: string;
+  category?: DocumentCategory;
+}
+
 export type HeadlineKind =
   | "bestMonth"
   | "aheadOfLastMonth"

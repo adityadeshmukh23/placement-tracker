@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
+  Eye,
+  EyeOff,
   MessageCircle,
   Phone,
   Plus,
@@ -12,6 +14,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { currentMonth, deletePayment, getShopsWithCurrentStatus } from "@/lib/db";
+import { formatMoney } from "@/lib/money";
+import { useMoneyVisibility } from "@/lib/useMoneyVisibility";
 import { SYNCED_EVENT } from "@/lib/sync";
 import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
@@ -59,6 +63,7 @@ function HomeInner() {
   const [pendingUndo, setPendingUndo] = useState<Payment | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
   const [paymentSavedToast, setPaymentSavedToast] = useState<string | null>(null);
+  const [moneyVisible, toggleMoneyVisible] = useMoneyVisibility();
 
   useEffect(() => {
     const refresh = () => getShopsWithCurrentStatus().then(setShops);
@@ -166,6 +171,8 @@ function HomeInner() {
         totalPending={summary.totalPending}
         paidCount={summary.paidCount}
         unpaidCount={summary.unpaidCount}
+        moneyVisible={moneyVisible}
+        onToggleMoneyVisible={toggleMoneyVisible}
         t={t}
       />
 
@@ -236,24 +243,38 @@ function SummaryCard({
   totalPending,
   paidCount,
   unpaidCount,
+  moneyVisible,
+  onToggleMoneyVisible,
   t,
 }: {
   totalCollected: number;
   totalPending: number;
   paidCount: number;
   unpaidCount: number;
+  moneyVisible: boolean;
+  onToggleMoneyVisible: () => void;
   t: T;
 }) {
   return (
     <section className="rounded-2xl border border-black/[.08] p-5 dark:border-white/[.12]">
-      <p className="mb-3 text-base font-medium opacity-60">{t("thisMonth")}</p>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-base font-medium opacity-60">{t("thisMonth")}</p>
+        <button
+          type="button"
+          onClick={onToggleMoneyVisible}
+          aria-label={moneyVisible ? t("hideAmounts") : t("showAmounts")}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full opacity-60"
+        >
+          {moneyVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+        </button>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <p className="text-sm uppercase tracking-wide opacity-50">
             {t("totalCollected")}
           </p>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-            ₹{totalCollected.toLocaleString("en-IN")}
+            {formatMoney(totalCollected, moneyVisible)}
           </p>
         </div>
         <div>
@@ -261,7 +282,7 @@ function SummaryCard({
             {t("totalPending")}
           </p>
           <p className="text-3xl font-bold text-red-600 dark:text-red-400">
-            ₹{totalPending.toLocaleString("en-IN")}
+            {formatMoney(totalPending, moneyVisible)}
           </p>
         </div>
       </div>

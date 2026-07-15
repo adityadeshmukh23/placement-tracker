@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Receipt } from "lucide-react";
+import { ChevronRight, FolderLock, Receipt } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 import { BackButton } from "@/app/components/BackButton";
 import type { TranslationKey } from "@/lib/translations";
@@ -10,7 +10,10 @@ const MENU_ITEMS: {
   href: string;
   labelKey: TranslationKey;
   Icon: typeof Receipt;
-}[] = [{ href: "/other", labelKey: "otherRecords", Icon: Receipt }];
+}[] = [
+  { href: "/other", labelKey: "otherRecords", Icon: Receipt },
+  { href: "/documents", labelKey: "familyDocuments", Icon: FolderLock },
+];
 
 export default function MorePage() {
   const { t } = useTranslation();

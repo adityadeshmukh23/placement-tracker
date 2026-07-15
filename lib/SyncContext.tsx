@@ -31,6 +31,17 @@ const DEBOUNCE_MS = 800;
  */
 const PIN_KEY = "bhadebook:sync-pin";
 
+/**
+ * Reads the PIN remembered on this device (set on a successful sign-in).
+ * Used to verify PIN re-entry for sensitive documents — a lightweight local
+ * check rather than a full re-auth round trip, consistent with this app's
+ * shared-PIN trust model (see lib/loggedBy.ts).
+ */
+export function getRememberedPin(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(PIN_KEY);
+}
+
 export type SyncUiStatus = "idle" | "syncing" | "synced" | "offline" | "error";
 
 interface SyncContextValue {

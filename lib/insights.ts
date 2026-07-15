@@ -6,6 +6,7 @@ import {
   monthsBetween,
   notDeleted,
 } from "./db";
+import { formatMoney } from "./money";
 import type { Language } from "./translations";
 import type {
   AreaIncome,
@@ -353,17 +354,21 @@ export async function getHeadlineInsight(scope: TenantType): Promise<HeadlineIns
 // Full localized sentences (not simple key lookups) since these need
 // interpolated amounts/percentages — same approach as lib/whatsapp.ts.
 
-export function buildHeadlineText(insight: HeadlineInsight, language: Language): string {
-  const amountLabel = insight.amount != null ? insight.amount.toLocaleString("en-IN") : "";
+export function buildHeadlineText(
+  insight: HeadlineInsight,
+  language: Language,
+  moneyVisible: boolean
+): string {
+  const amountLabel = insight.amount != null ? formatMoney(insight.amount, moneyVisible) : "";
 
   if (language === "mr") {
     switch (insight.kind) {
       case "bestMonth":
         return "या वर्षीचा हा तुमचा सर्वात चांगला वसुलीचा महिना आहे!";
       case "aheadOfLastMonth":
-        return `या टप्प्यावर गेल्या महिन्यापेक्षा तुम्ही ₹${amountLabel} ने पुढे आहात.`;
+        return `या टप्प्यावर गेल्या महिन्यापेक्षा तुम्ही ${amountLabel} ने पुढे आहात.`;
       case "behindLastMonth":
-        return `या टप्प्यावर गेल्या महिन्यापेक्षा तुम्ही ₹${amountLabel} ने मागे आहात.`;
+        return `या टप्प्यावर गेल्या महिन्यापेक्षा तुम्ही ${amountLabel} ने मागे आहात.`;
       case "onPaceLastMonth":
         return "गेल्या महिन्याइतकीच वसुली सुरू आहे.";
       case "monthProgress":
@@ -378,9 +383,9 @@ export function buildHeadlineText(insight: HeadlineInsight, language: Language):
     case "bestMonth":
       return "This is your best collection month this year!";
     case "aheadOfLastMonth":
-      return `You're ₹${amountLabel} ahead of where you were last month at this point.`;
+      return `You're ${amountLabel} ahead of where you were last month at this point.`;
     case "behindLastMonth":
-      return `You're ₹${amountLabel} behind where you were last month at this point.`;
+      return `You're ${amountLabel} behind where you were last month at this point.`;
     case "onPaceLastMonth":
       return "You're right on pace with last month.";
     case "monthProgress":
@@ -414,15 +419,19 @@ export function buildYoySentence(yoy: YoyComparison, language: Language): string
     : `₹${thisLabel} collected so far this year — ${pct}% less than the same period last year.`;
 }
 
-export function buildThisMonthSentence(progress: MonthProgress, language: Language): string {
-  const expected = progress.expected.toLocaleString("en-IN");
-  const collected = progress.collected.toLocaleString("en-IN");
-  const remaining = Math.max(0, progress.remaining).toLocaleString("en-IN");
+export function buildThisMonthSentence(
+  progress: MonthProgress,
+  language: Language,
+  moneyVisible: boolean
+): string {
+  const expected = formatMoney(progress.expected, moneyVisible);
+  const collected = formatMoney(progress.collected, moneyVisible);
+  const remaining = formatMoney(Math.max(0, progress.remaining), moneyVisible);
 
   if (language === "mr") {
-    return `या महिन्याचे एकूण अपेक्षित भाडे ₹${expected} आहे — त्यापैकी ₹${collected} जमा झाले असून ₹${remaining} अजून येणे बाकी आहे.`;
+    return `या महिन्याचे एकूण अपेक्षित भाडे ${expected} आहे — त्यापैकी ${collected} जमा झाले असून ${remaining} अजून येणे बाकी आहे.`;
   }
-  return `Expected ₹${expected} this month — ₹${collected} collected so far, ₹${remaining} still to come.`;
+  return `Expected ${expected} this month — ${collected} collected so far, ${remaining} still to come.`;
 }
 
 export function buildVacancyLine(note: VacantShopNote, language: Language): string {

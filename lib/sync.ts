@@ -1,7 +1,14 @@
 import type { Table, UpdateSpec } from "dexie";
 import { db } from "./db";
 import { getSession, isSyncConfigured, supabase } from "./supabase";
-import type { OtherTransaction, Payment, Shop, SyncFields, Tenant } from "./types";
+import type {
+  FamilyDocument,
+  OtherTransaction,
+  Payment,
+  Shop,
+  SyncFields,
+  Tenant,
+} from "./types";
 
 /**
  * The sync engine sits on top of Dexie, which remains the local source of truth
@@ -167,6 +174,40 @@ function otherTransactionFromRemote(r: RemoteRow): OtherTransaction {
   };
 }
 
+function documentToRemote(d: FamilyDocument): RemoteRow {
+  return {
+    ...syncToRemote(d),
+    title: d.title,
+    category: d.category,
+    category_other: d.categoryOther ?? null,
+    belongs_to: d.belongsTo,
+    belongs_to_other: d.belongsToOther ?? null,
+    file_url: d.fileUrl,
+    file_type: d.fileType,
+    expiry_date: toIso(d.expiryDate ?? null),
+    notes: d.notes ?? null,
+    uploaded_by: d.uploadedBy,
+    sensitive: d.sensitive,
+  };
+}
+
+function documentFromRemote(r: RemoteRow): FamilyDocument {
+  return {
+    ...syncFromRemote(r),
+    title: r.title,
+    category: r.category,
+    categoryOther: r.category_other ?? undefined,
+    belongsTo: r.belongs_to,
+    belongsToOther: r.belongs_to_other ?? undefined,
+    fileUrl: r.file_url,
+    fileType: r.file_type,
+    expiryDate: r.expiry_date ? new Date(r.expiry_date) : undefined,
+    notes: r.notes ?? undefined,
+    uploadedBy: r.uploaded_by,
+    sensitive: r.sensitive,
+  };
+}
+
 interface TableSync<T extends SyncFields> {
   table: Table<T, string>;
   remote: string;
@@ -198,7 +239,19 @@ const OTHER_TRANSACTIONS: TableSync<OtherTransaction> = {
   toRemote: otherTransactionToRemote,
   fromRemote: otherTransactionFromRemote,
 };
-const TABLES: TableSync<any>[] = [SHOPS, TENANTS, PAYMENTS, OTHER_TRANSACTIONS];
+const DOCUMENTS: TableSync<FamilyDocument> = {
+  table: db.documents,
+  remote: "documents",
+  toRemote: documentToRemote,
+  fromRemote: documentFromRemote,
+};
+const TABLES: TableSync<any>[] = [
+  SHOPS,
+  TENANTS,
+  PAYMENTS,
+  OTHER_TRANSACTIONS,
+  DOCUMENTS,
+];
 
 // --- Push / pull -------------------------------------------------------------
 

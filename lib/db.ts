@@ -1,5 +1,7 @@
 import Dexie, { type Table } from "dexie";
 import type {
+  DocumentFilter,
+  FamilyDocument,
   LedgerRow,
   MonthlyCollected,
   MonthlySummary,
@@ -20,6 +22,7 @@ export class RentalBookDB extends Dexie {
   tenants!: Table<Tenant, string>;
   payments!: Table<Payment, string>;
   otherTransactions!: Table<OtherTransaction, string>;
+  documents!: Table<FamilyDocument, string>;
 
   constructor() {
     // Storage name intentionally left as "bhadebook" (the app's former name) so
@@ -55,6 +58,12 @@ export class RentalBookDB extends Dexie {
     // separate from the rent system above.
     this.version(4).stores({
       otherTransactions: "id, date, category, direction, updatedAt",
+    });
+
+    // v5: adds FamilyDocument — metadata only; the actual file lives in the
+    // "documents" Supabase Storage bucket (see lib/storage.ts).
+    this.version(5).stores({
+      documents: "id, category, belongsTo, expiryDate, updatedAt",
     });
   }
 }
@@ -535,4 +544,58 @@ export async function getOtherTransactions(
       return true;
     })
     .sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
+// --- Family Documents ---------------------------------------------------
+// Metadata only — the referenced file lives in Supabase Storage (see
+// lib/storage.ts), fully independent of the rent system above.
+
+export async function addDocument(
+  data: Omit<FamilyDocument, keyof SyncFields>
+): Promise<string> {
+  const record = { ...data, ...freshRecord() };
+  await db.documents.add(record);
+  notifyLocalChange();
+  return record.id;
+}
+
+export async function updateDocument(
+  id: string,
+  changes: Partial<Omit<FamilyDocument, keyof SyncFields>>
+): Promise<void> {
+  await db.documents.update(id, { ...changes, ...touch() } as Partial<FamilyDocument>);
+  notifyLocalChange();
+}
+
+export async function deleteDocument(id: string): Promise<void> {
+  const now = new Date();
+  await db.documents.update(id, { deletedAt: now, ...touch(now) });
+  notifyLocalChange();
+}
+
+/**
+ * The single source of truth for querying documents — composable by keyword
+ * (title/category/owner) and category, kept in the data layer rather than
+ * baked into the UI, matching getOtherTransactions' convention.
+ */
+export async function getDocuments(
+  filter: DocumentFilter = {}
+): Promise<FamilyDocument[]> {
+  const all = await db.documents.filter(notDeleted).toArray();
+  const keyword = filter.keyword?.trim().toLowerCase();
+
+  return all
+    .filter((doc) => {
+      if (filter.category && doc.category !== filter.category) return false;
+      if (keyword) {
+        const categoryText =
+          doc.category === "other" ? doc.categoryOther ?? "" : doc.category;
+        const ownerText =
+          doc.belongsTo === "other" ? doc.belongsToOther ?? "" : doc.belongsTo;
+        const haystack = `${doc.title} ${categoryText} ${ownerText}`.toLowerCase();
+        if (!haystack.includes(keyword)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }

@@ -19,6 +19,7 @@ import {
   getYoyComparison,
 } from "@/lib/insights";
 import { SYNCED_EVENT } from "@/lib/sync";
+import { useMoneyVisibility } from "@/lib/useMoneyVisibility";
 import { useTranslation } from "@/lib/useTranslation";
 import { RentScopeToggle } from "@/app/components/RentScopeToggle";
 import { BackButton } from "@/app/components/BackButton";
@@ -48,6 +49,7 @@ interface InsightsData {
 
 export default function InsightsPage() {
   const { t, language } = useTranslation();
+  const [moneyVisible] = useMoneyVisibility();
   const [scope, setScope] = useState<TenantType>("regular");
   const [data, setData] = useState<InsightsData | null>(null);
 
@@ -114,7 +116,11 @@ export default function InsightsPage() {
         <InsightsSkeleton />
       ) : (
         <>
-          <HeadlineCard headline={data.headline} language={language} />
+          <HeadlineCard
+            headline={data.headline}
+            language={language}
+            moneyVisible={moneyVisible}
+          />
 
           <Section title={t("yearVsLastYear")}>
             <p className="text-base">{buildYoySentence(data.yoy, language)}</p>
@@ -215,7 +221,9 @@ export default function InsightsPage() {
           </Section>
 
           <Section title={t("thisMonthSoFarHeading")}>
-            <p className="text-base">{buildThisMonthSentence(data.progress, language)}</p>
+            <p className="text-base">
+              {buildThisMonthSentence(data.progress, language, moneyVisible)}
+            </p>
           </Section>
 
           {data.vacantShops.length > 0 && (
@@ -238,9 +246,11 @@ export default function InsightsPage() {
 function HeadlineCard({
   headline,
   language,
+  moneyVisible,
 }: {
   headline: HeadlineInsight;
   language: Language;
+  moneyVisible: boolean;
 }) {
   const isGreen = headline.tone === "green";
   return (
@@ -258,7 +268,7 @@ function HeadlineCard({
             : "text-amber-700 dark:text-amber-400"
         }`}
       >
-        {buildHeadlineText(headline, language)}
+        {buildHeadlineText(headline, language, moneyVisible)}
       </p>
     </section>
   );

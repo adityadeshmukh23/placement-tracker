@@ -27,8 +27,11 @@ account by entering it. Nobody manages individual usernames.
 
 1. In the project, open **SQL Editor → New query**.
 2. Paste the entire contents of [`supabase/schema.sql`](../supabase/schema.sql)
-   and click **Run**. This creates the `shops`, `tenants`, and `payments` tables
-   and enables Row Level Security so only a signed-in user can touch the data.
+   and click **Run**. This creates the app's tables (including `documents`, the
+   metadata table behind Family Documents), a private `documents` Storage
+   bucket for the actual document files, and enables Row Level Security so
+   only a signed-in user can touch any of it. Already deployed before? Just
+   re-run the same file — every statement is safe to run again.
 
 ## 3. Create the one shared household account (and set the PIN)
 
@@ -100,3 +103,7 @@ You can also watch rows appear live in Supabase under **Table Editor**.
   again and so a device can re-connect on its own after its session expires. Sign
   out from the Cloud Sync bar to forget it on that device.
 - Deleting the `.env.local` values cleanly turns sync back off; local data stays.
+- **Family Documents (More → Family Documents) requires cloud sync.** Unlike
+  the rest of the app, uploaded files live only in Supabase Storage — there's
+  no offline-only fallback, so that screen shows a setup notice instead of an
+  upload form until sync is configured.
