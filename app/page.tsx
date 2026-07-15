@@ -363,10 +363,7 @@ function ShopRow({
     if (!shop.tenant?.phone) return;
     const amountDue = Math.max(0, shop.monthlyRent - shop.collected);
     const message = buildReminderMessage({
-      tenantName: shop.tenant.name,
       amountDue,
-      shopName: shop.name,
-      month: currentMonth(),
       language,
       tenantType: shop.tenant.type,
     });

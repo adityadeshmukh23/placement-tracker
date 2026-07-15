@@ -61,28 +61,25 @@ export function buildReceiptMessage(params: {
  * not overdue rent from a formal tenancy — matches the same soft treatment
  * used for their status pill). Regular tenants get firmer wording, since
  * these are normal, formal tenancies where a clearer nudge is appropriate.
+ * Only the amount is dynamic — no tenant name, shop name, or month.
  */
 export function buildReminderMessage(params: {
-  tenantName: string;
   amountDue: number;
-  shopName: string;
-  month: string;
   language: Language;
   tenantType: TenantType;
 }): string {
-  const { tenantName, amountDue, shopName, month, language, tenantType } = params;
-  const monthLabel = formatMonthYear(month, language);
+  const { amountDue, language, tenantType } = params;
   const amountLabel = amountDue.toLocaleString("en-IN");
 
   if (tenantType === "family") {
     if (language === "mr") {
-      return `नमस्कार ${tenantName}, ${shopName} चे ${monthLabel} महिन्याचे ₹${amountLabel} भाडे अजून प्रलंबित आहे. कृपया लवकरात लवकर भरा. धन्यवाद!`;
+      return `नमस्कार, तुमचे मासिक भाडे ₹${amountLabel} अजून प्रलंबित आहे. कृपया लवकरात लवकर भरा.`;
     }
-    return `Hi ${tenantName}, this is a reminder that ₹${amountLabel} rent for ${shopName} (${monthLabel}) is still pending. Kindly pay at your earliest convenience. Thank you!`;
+    return `Hi, this is a reminder that your monthly rent of ₹${amountLabel} is still pending. Kindly pay at your earliest convenience.`;
   }
 
   if (language === "mr") {
-    return `${tenantName}, ${shopName} चे ${monthLabel} महिन्याचे ₹${amountLabel} भाडे थकीत आहे. कृपया त्वरित भरणा करा. धन्यवाद.`;
+    return `तुमचे मासिक भाडे ₹${amountLabel} थकीत आहे. कृपया त्वरित भरणा करा.`;
   }
-  return `Dear ${tenantName}, your rent of ₹${amountLabel} for ${shopName} (${monthLabel}) is overdue. Please make the payment at the earliest to avoid any inconvenience. Thank you.`;
+  return `Your monthly rent of ₹${amountLabel} is overdue. Please make the payment at the earliest to avoid any inconvenience.`;
 }

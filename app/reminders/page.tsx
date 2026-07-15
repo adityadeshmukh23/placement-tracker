@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, MessageCircle } from "lucide-react";
-import { currentMonth, getShopsWithCurrentStatus } from "@/lib/db";
+import { getShopsWithCurrentStatus } from "@/lib/db";
 import { useTranslation } from "@/lib/useTranslation";
 import { buildReminderMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { BackButton } from "@/app/components/BackButton";
@@ -72,10 +72,7 @@ export default function RemindersPage() {
     if (!shop.tenant?.phone) return;
     const amountDue = Math.max(0, shop.monthlyRent - shop.collected);
     const message = buildReminderMessage({
-      tenantName: shop.tenant.name,
       amountDue,
-      shopName: shop.name,
-      month: currentMonth(),
       language,
       tenantType: shop.tenant.type,
     });
