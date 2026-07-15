@@ -17,8 +17,9 @@ import { useTranslation } from "@/lib/useTranslation";
 import { StatusPill } from "@/app/components/StatusPill";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { BackButton } from "@/app/components/BackButton";
+import { RentScopeToggle } from "@/app/components/RentScopeToggle";
 import { deletePaymentMessage } from "@/lib/confirmMessages";
-import type { Payment, ShopWithStatus } from "@/lib/types";
+import type { Payment, ShopWithStatus, TenantType } from "@/lib/types";
 
 function formatMonthLabel(month: string, locale: string): string {
   const [year, monthNum] = month.split("-").map(Number);
@@ -52,6 +53,9 @@ function ShopsList() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null);
+  // Shop Rent (regular tenants) is the default view, matching the Dashboard's
+  // convention — Family Rent is one tap away via the same toggle.
+  const [scope, setScope] = useState<TenantType>("regular");
   const [query, setQuery] = useState("");
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -126,16 +130,23 @@ function ShopsList() {
     setShops(await getShopsWithCurrentStatus());
   }
 
+  // Vacant shops have no tenant type to belong to, so they're shown regardless
+  // of the selected scope — only occupied shops of the *other* rent type are
+  // filtered out. Matches the same convention used on the Dashboard.
+  const scopedShops = useMemo(
+    () => (shops ?? []).filter((s) => s.tenant === null || s.tenant.type === scope),
+    [shops, scope]
+  );
+
   const filtered = useMemo(() => {
-    if (!shops) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return shops;
-    return shops.filter(
+    if (!q) return scopedShops;
+    return scopedShops.filter(
       (shop) =>
         shop.name.toLowerCase().includes(q) ||
         (shop.tenant?.name.toLowerCase().includes(q) ?? false)
     );
-  }, [shops, query]);
+  }, [scopedShops, query]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, ShopWithStatus[]>();
@@ -190,6 +201,10 @@ function ShopsList() {
           {t("addShop")}
         </Link>
       </div>
+
+      {shops !== null && shops.length > 0 && (
+        <RentScopeToggle scope={scope} onChange={setScope} />
+      )}
 
       <input
         type="search"
