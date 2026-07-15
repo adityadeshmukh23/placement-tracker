@@ -184,6 +184,20 @@ function HomeInner() {
         >
           📣
         </Link>
+        <Link
+          href="/other"
+          aria-label={t("otherRecords")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
+        >
+          🧾
+        </Link>
+        <Link
+          href="/insights"
+          aria-label={t("insights")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/[.12] text-xl dark:border-white/[.15]"
+        >
+          📈
+        </Link>
       </div>
 
       <ul className="flex flex-col divide-y divide-black/[.06] rounded-lg border border-black/[.08] dark:divide-white/[.08] dark:border-white/[.12]">

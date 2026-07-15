@@ -1,7 +1,7 @@
 import type { Table, UpdateSpec } from "dexie";
 import { db } from "./db";
 import { getSession, isSyncConfigured, supabase } from "./supabase";
-import type { Payment, Shop, SyncFields, Tenant } from "./types";
+import type { OtherTransaction, Payment, Shop, SyncFields, Tenant } from "./types";
 
 /**
  * The sync engine sits on top of Dexie, which remains the local source of truth
@@ -139,6 +139,34 @@ function paymentFromRemote(r: RemoteRow): Payment {
   };
 }
 
+function otherTransactionToRemote(o: OtherTransaction): RemoteRow {
+  return {
+    ...syncToRemote(o),
+    amount: o.amount,
+    direction: o.direction,
+    category: o.category,
+    category_other: o.categoryOther ?? null,
+    description: o.description ?? null,
+    date: o.date.toISOString(),
+    logged_by: o.loggedBy,
+    photo: o.photo ?? null,
+  };
+}
+
+function otherTransactionFromRemote(r: RemoteRow): OtherTransaction {
+  return {
+    ...syncFromRemote(r),
+    amount: r.amount,
+    direction: r.direction,
+    category: r.category,
+    categoryOther: r.category_other ?? undefined,
+    description: r.description ?? undefined,
+    date: new Date(r.date),
+    loggedBy: r.logged_by,
+    photo: r.photo ?? undefined,
+  };
+}
+
 interface TableSync<T extends SyncFields> {
   table: Table<T, string>;
   remote: string;
@@ -164,7 +192,13 @@ const PAYMENTS: TableSync<Payment> = {
   toRemote: paymentToRemote,
   fromRemote: paymentFromRemote,
 };
-const TABLES: TableSync<any>[] = [SHOPS, TENANTS, PAYMENTS];
+const OTHER_TRANSACTIONS: TableSync<OtherTransaction> = {
+  table: db.otherTransactions,
+  remote: "other_transactions",
+  toRemote: otherTransactionToRemote,
+  fromRemote: otherTransactionFromRemote,
+};
+const TABLES: TableSync<any>[] = [SHOPS, TENANTS, PAYMENTS, OTHER_TRANSACTIONS];
 
 // --- Push / pull -------------------------------------------------------------
 

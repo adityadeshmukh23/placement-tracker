@@ -10,7 +10,11 @@ export function Fab() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
-  if (pathname.startsWith("/payments/new") || pathname.startsWith("/shops/new")) {
+  if (
+    pathname.startsWith("/payments/new") ||
+    pathname.startsWith("/shops/new") ||
+    pathname.startsWith("/other/new")
+  ) {
     return null;
   }
 
@@ -54,6 +58,16 @@ export function Fab() {
                   🏠
                 </span>
                 {t("addNewShop")}
+              </Link>
+              <Link
+                href={`/other/new?from=${encodeURIComponent(pathname)}`}
+                onClick={() => setOpen(false)}
+                className="flex h-14 items-center gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
+              >
+                <span className="text-xl" aria-hidden>
+                  🧾
+                </span>
+                {t("otherTransaction")}
               </Link>
               <button
                 type="button"

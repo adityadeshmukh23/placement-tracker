@@ -87,3 +87,105 @@ export interface MonthlyCollected {
   month: string;
   collected: number;
 }
+
+export type TransactionDirection = "out" | "in";
+
+export type TransactionCategory =
+  | "medical"
+  | "insurance"
+  | "family"
+  | "donation"
+  | "personal"
+  | "other";
+
+/**
+ * A miscellaneous personal record (a donation, a medical expense, etc.) —
+ * fully independent of the Shop/Tenant/Payment rent system. Never counted in
+ * any rent total, Dashboard figure, or Report.
+ */
+export interface OtherTransaction extends SyncFields {
+  amount: number;
+  direction: TransactionDirection;
+  category: TransactionCategory;
+  /** Free text, used only when `category` is `"other"`. */
+  categoryOther?: string;
+  description?: string;
+  /** The date the transaction actually happened (not when it was logged). */
+  date: Date;
+  /** Name of whoever logged it, captured once at creation from this device. */
+  loggedBy: string;
+  /** Optional photo, stored as a client-side downscaled data URL. */
+  photo?: string;
+}
+
+/** Composable filter for `getOtherTransactions` — keyword/category/date-range,
+ * kept in the data layer (not baked into any UI component) so it can also
+ * back a future natural-language "ask the app" query feature. */
+export interface OtherTransactionFilter {
+  keyword?: string;
+  category?: TransactionCategory;
+  /** Inclusive "YYYY-MM-DD" bounds. */
+  startDate?: string;
+  endDate?: string;
+}
+
+// --- Insights ----------------------------------------------------------
+
+export interface YoyComparison {
+  thisYearToDate: number;
+  lastYearSamePeriod: number;
+  /** Null when last year has no collections to compare against. */
+  percentChange: number | null;
+}
+
+export interface TenantReliability {
+  tenantId: string;
+  tenantName: string;
+  shopName: string;
+  tenantType: TenantType;
+  monthsTracked: number;
+  monthsPaidOnTime: number;
+  reliabilityRate: number;
+}
+
+export interface TenantAttention {
+  tenantId: string;
+  tenantName: string;
+  shopName: string;
+  tenantType: TenantType;
+  monthsInArrears: number;
+  totalArrears: number;
+}
+
+export interface AreaIncome {
+  area: string;
+  collected: number;
+}
+
+export interface MonthProgress {
+  expected: number;
+  collected: number;
+  remaining: number;
+}
+
+export interface VacantShopNote {
+  shopName: string;
+  monthsVacant: number;
+}
+
+export type HeadlineKind =
+  | "bestMonth"
+  | "aheadOfLastMonth"
+  | "behindLastMonth"
+  | "onPaceLastMonth"
+  | "monthProgress"
+  | "noData";
+
+export interface HeadlineInsight {
+  tone: "green" | "amber";
+  kind: HeadlineKind;
+  /** Rupee amount, present for aheadOfLastMonth/behindLastMonth. */
+  amount?: number;
+  /** Whole-number percent, present for monthProgress. */
+  percent?: number;
+}

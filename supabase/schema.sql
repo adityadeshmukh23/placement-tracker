@@ -46,21 +46,52 @@ create table if not exists payments (
   deleted_at   timestamptz
 );
 
+-- other_transactions: miscellaneous personal records (a donation, a medical
+-- expense, ...) fully independent of the rent tables above. Added later than
+-- the rest of this schema — this file is safe to re-run in full on an
+-- existing project (every statement is IF NOT EXISTS), so re-running it is
+-- how an already-deployed project picks up this table.
+create table if not exists other_transactions (
+  id             uuid primary key,
+  amount         numeric not null,
+  direction      text not null,
+  category       text not null,
+  category_other text,
+  description    text,
+  date           timestamptz not null,
+  logged_by      text not null,
+  photo          text,
+  created_at     timestamptz not null,
+  updated_at     timestamptz not null,
+  deleted_at     timestamptz
+);
+
 -- Pull queries filter on updated_at; index it on each table.
 create index if not exists shops_updated_at_idx    on shops    (updated_at);
 create index if not exists tenants_updated_at_idx  on tenants  (updated_at);
 create index if not exists payments_updated_at_idx on payments (updated_at);
+create index if not exists other_transactions_updated_at_idx on other_transactions (updated_at);
 
 -- Row Level Security: enable it, then allow any *authenticated* user full access.
 -- This is a single-household app — everyone who logs in shares one dataset, so
 -- there is no per-user row ownership. The shared credentials are the boundary.
-alter table shops    enable row level security;
-alter table tenants  enable row level security;
-alter table payments enable row level security;
+alter table shops              enable row level security;
+alter table tenants             enable row level security;
+alter table payments            enable row level security;
+alter table other_transactions  enable row level security;
 
+-- `create policy` has no IF NOT EXISTS — drop-then-recreate so this whole
+-- file stays safe to re-run in full (needed so an already-deployed project
+-- can pick up other_transactions by just re-running this same file).
+drop policy if exists "authenticated full access" on shops;
 create policy "authenticated full access" on shops
   for all to authenticated using (true) with check (true);
+drop policy if exists "authenticated full access" on tenants;
 create policy "authenticated full access" on tenants
   for all to authenticated using (true) with check (true);
+drop policy if exists "authenticated full access" on payments;
 create policy "authenticated full access" on payments
+  for all to authenticated using (true) with check (true);
+drop policy if exists "authenticated full access" on other_transactions;
+create policy "authenticated full access" on other_transactions
   for all to authenticated using (true) with check (true);

@@ -49,3 +49,14 @@ export function recordAnywayConfirmMessage(
   }
   return `${shopName} is already fully paid for ${monthLabel}. Are you sure you want to record an additional payment anyway?`;
 }
+
+export function deleteOtherTransactionMessage(
+  amount: number,
+  language: Language
+): string {
+  const amountLabel = amount.toLocaleString("en-IN");
+  if (language === "mr") {
+    return `हे ₹${amountLabel} चे रेकॉर्ड हटवायचे? हे पूर्ववत करता येणार नाही.`;
+  }
+  return `Delete this ₹${amountLabel} record? This cannot be undone.`;
+}

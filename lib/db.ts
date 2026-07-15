@@ -3,6 +3,8 @@ import type {
   LedgerRow,
   MonthlyCollected,
   MonthlySummary,
+  OtherTransaction,
+  OtherTransactionFilter,
   Payment,
   PaymentStatus,
   Shop,
@@ -17,6 +19,7 @@ export class RentalBookDB extends Dexie {
   shops!: Table<Shop, string>;
   tenants!: Table<Tenant, string>;
   payments!: Table<Payment, string>;
+  otherTransactions!: Table<OtherTransaction, string>;
 
   constructor() {
     // Storage name intentionally left as "bhadebook" (the app's former name) so
@@ -46,6 +49,12 @@ export class RentalBookDB extends Dexie {
       shops: "id, area, updatedAt",
       tenants: "id, shopId, updatedAt",
       payments: "id, shopId, tenantId, dueMonth, updatedAt",
+    });
+
+    // v4: adds OtherTransaction — miscellaneous personal records, fully
+    // separate from the rent system above.
+    this.version(4).stores({
+      otherTransactions: "id, date, category, direction, updatedAt",
     });
   }
 }
@@ -83,7 +92,7 @@ function touch(now: Date = new Date()): Pick<SyncFields, "updatedAt" | "dirty"> 
 }
 
 /** True for records that have not been tombstoned (soft-deleted). */
-function notDeleted(record: { deletedAt: Date | null }): boolean {
+export function notDeleted(record: { deletedAt: Date | null }): boolean {
   return record.deletedAt == null;
 }
 
@@ -115,7 +124,7 @@ function isActive(tenant: Tenant): boolean {
 }
 
 /** A live, active tenant: neither deactivated nor tombstoned. */
-function isLiveActive(tenant: Tenant): boolean {
+export function isLiveActive(tenant: Tenant): boolean {
   return isActive(tenant) && notDeleted(tenant);
 }
 
@@ -347,7 +356,7 @@ export async function deletePayment(paymentId: string): Promise<void> {
 }
 
 /** Every "YYYY-MM" month from `startMonth` to `endMonth`, inclusive. */
-function monthsBetween(startMonth: string, endMonth: string): string[] {
+export function monthsBetween(startMonth: string, endMonth: string): string[] {
   const [startYear, startMonthNum] = startMonth.split("-").map(Number);
   const [endYear, endMonthNum] = endMonth.split("-").map(Number);
 
@@ -461,4 +470,69 @@ export async function getAvailableYears(): Promise<string[]> {
   const years = new Set(payments.map((p) => p.dueMonth.slice(0, 4)));
   years.add(currentMonth().slice(0, 4));
   return Array.from(years).sort((a, b) => b.localeCompare(a));
+}
+
+// --- Other Transactions -------------------------------------------------
+// Miscellaneous personal records (a donation, a medical expense, ...) fully
+// independent of the Shop/Tenant/Payment rent system above. None of these
+// functions are called by any Dashboard/Reports code path — that separation
+// is what keeps rent totals untouched by these records.
+
+function dateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export async function addOtherTransaction(
+  data: Omit<OtherTransaction, keyof SyncFields>
+): Promise<string> {
+  const record = { ...data, ...freshRecord() };
+  await db.otherTransactions.add(record);
+  notifyLocalChange();
+  return record.id;
+}
+
+export async function updateOtherTransaction(
+  id: string,
+  changes: Partial<Omit<OtherTransaction, keyof SyncFields>>
+): Promise<void> {
+  await db.otherTransactions.update(id, { ...changes, ...touch() } as Partial<OtherTransaction>);
+  notifyLocalChange();
+}
+
+export async function deleteOtherTransaction(id: string): Promise<void> {
+  const now = new Date();
+  await db.otherTransactions.update(id, { deletedAt: now, ...touch(now) });
+  notifyLocalChange();
+}
+
+/**
+ * The single source of truth for querying OtherTransactions — composable by
+ * keyword, category, and date range. Kept here rather than baked into any UI
+ * component so the same query can later back a natural-language "ask the
+ * app" feature without duplicating search logic.
+ */
+export async function getOtherTransactions(
+  filter: OtherTransactionFilter = {}
+): Promise<OtherTransaction[]> {
+  const all = await db.otherTransactions.filter(notDeleted).toArray();
+  const keyword = filter.keyword?.trim().toLowerCase();
+
+  return all
+    .filter((tx) => {
+      if (filter.category && tx.category !== filter.category) return false;
+      const key = dateKey(tx.date);
+      if (filter.startDate && key < filter.startDate) return false;
+      if (filter.endDate && key > filter.endDate) return false;
+      if (keyword) {
+        const categoryText =
+          tx.category === "other" ? tx.categoryOther ?? "" : tx.category;
+        const haystack = `${tx.description ?? ""} ${categoryText} ${tx.amount}`.toLowerCase();
+        if (!haystack.includes(keyword)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 }
