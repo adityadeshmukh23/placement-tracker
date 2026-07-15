@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, FolderLock, IndianRupee, Plus, Receipt, Store } from "lucide-react";
+import { FileText, FolderLock, Plus, Receipt, Store } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 
 export function Fab() {
@@ -25,7 +25,7 @@ export function Fab() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={t("addPayment")}
+        aria-label={t("quickActions")}
         className="fixed bottom-20 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)] shadow-lg active:scale-95"
       >
         <Plus className="h-7 w-7" strokeWidth={2.5} />
@@ -41,14 +41,6 @@ export function Fab() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-2">
-              <Link
-                href={`/payments/new?from=${encodeURIComponent(pathname)}`}
-                onClick={() => setOpen(false)}
-                className="flex h-14 items-center gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
-              >
-                <IndianRupee className="h-5 w-5 shrink-0" aria-hidden />
-                {t("recordPayment")}
-              </Link>
               <Link
                 href="/shops/new"
                 onClick={() => setOpen(false)}

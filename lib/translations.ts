@@ -16,6 +16,7 @@ export const translations = {
   totalPending: { en: "Total Pending", mr: "एकूण प्रलंबित" },
   totalDue: { en: "Total Due", mr: "एकूण देय" },
   addPayment: { en: "Add Payment", mr: "पेमेंट जोडा" },
+  quickActions: { en: "Add", mr: "जोडा" },
   addShop: { en: "Add Shop", mr: "दुकान जोडा" },
   addTenant: { en: "Add Tenant", mr: "भाडेकरू जोडा" },
   dashboard: { en: "Dashboard", mr: "डॅशबोर्ड" },
