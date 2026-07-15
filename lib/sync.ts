@@ -1,5 +1,6 @@
 import type { Table, UpdateSpec } from "dexie";
 import { db } from "./db";
+import { pullAllTables } from "./pullCursor";
 import { getSession, isSyncConfigured, supabase } from "./supabase";
 import type {
   FamilyDocument,
@@ -24,6 +25,16 @@ import type {
 const CURSOR_KEY = "bhadebook:last-pulled-at";
 const EPOCH = "1970-01-01T00:00:00.000Z";
 
+/**
+ * Bumped whenever a change to the pull logic could have left a device's cursor
+ * ahead of rows it should have pulled. On the first sync after an upgrade, the
+ * cursor is reset to EPOCH once so the whole dataset is re-pulled and any gaps
+ * are healed. Version 2 fixes a bug where the cursor was advanced between tables
+ * within one cycle, permanently skipping rows in tables pulled after `shops`.
+ */
+const SYNC_LOGIC_VERSION = "2";
+const LOGIC_VERSION_KEY = "bhadebook:sync-logic-version";
+
 export type SyncStatus =
   | "disabled" // sync not configured
   | "offline"
@@ -46,6 +57,21 @@ function getCursor(): string {
 
 function setCursor(iso: string): void {
   if (typeof localStorage !== "undefined") localStorage.setItem(CURSOR_KEY, iso);
+}
+
+/**
+ * One-time-per-device recovery: if the pull logic version changed since this
+ * device last synced, reset the cursor to EPOCH so the next pull re-reads the
+ * full dataset and heals any rows a previous, buggy version skipped. This is
+ * safe under last-write-wins: re-pulled rows only overwrite older local copies,
+ * and any locally-edited-but-unpushed row (with a newer `updatedAt`) is kept.
+ */
+function healCursorForNewLogic(): void {
+  if (typeof localStorage === "undefined") return;
+  if (localStorage.getItem(LOGIC_VERSION_KEY) !== SYNC_LOGIC_VERSION) {
+    setCursor(EPOCH);
+    localStorage.setItem(LOGIC_VERSION_KEY, SYNC_LOGIC_VERSION);
+  }
 }
 
 function toIso(date: Date | null): string | null {
@@ -324,16 +350,14 @@ export async function sync(): Promise<SyncResult> {
   try {
     for (const t of TABLES) await pushTable(t);
 
-    let cursor = getCursor();
-    let anyChanged = false;
-    for (const t of TABLES) {
-      const { maxUpdated, changed } = await pullTable(t, cursor);
-      if (maxUpdated > cursor) cursor = maxUpdated;
-      anyChanged = anyChanged || changed;
-    }
+    healCursorForNewLogic();
+    const { cursor, changed } = await pullAllTables(
+      TABLES.map((t) => (since: string) => pullTable(t, since)),
+      getCursor()
+    );
     setCursor(cursor);
 
-    if (anyChanged && typeof window !== "undefined") {
+    if (changed && typeof window !== "undefined") {
       window.dispatchEvent(new Event(SYNCED_EVENT));
     }
     return { status: "ok" };
