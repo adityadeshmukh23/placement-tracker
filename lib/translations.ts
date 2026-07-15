@@ -228,6 +228,61 @@ export const translations = {
     en: "Cloud sync isn't set up, so there's no shared PIN to change.",
     mr: "क्लाउड सिंक सेट केलेले नाही, त्यामुळे बदलण्यासाठी कोणताही सामायिक पिन नाही.",
   },
+  biometricUnlock: {
+    en: "Unlock with Face ID / Fingerprint",
+    mr: "Face ID / फिंगरप्रिंटने अनलॉक करा",
+  },
+  usePinInstead: { en: "Use PIN instead", mr: "त्याऐवजी पिन वापरा" },
+  enableBiometricTitle: {
+    en: "Enable Face ID / Fingerprint?",
+    mr: "Face ID / फिंगरप्रिंट सुरू करायचे का?",
+  },
+  enableBiometricBody: {
+    en: "Quickly unlock this app on this device without typing the PIN every time. You can turn this off anytime in More.",
+    mr: "दर वेळी पिन न टाकता या डिव्हाइसवर हे अ‍ॅप पटकन अनलॉक करा. तुम्ही हे \"अधिक\" मध्ये कधीही बंद करू शकता.",
+  },
+  turnOnBiometric: {
+    en: "Turn On",
+    mr: "सुरू करा",
+  },
+  notNow: { en: "Not Now", mr: "आत्ता नाही" },
+  turnOffBiometric: { en: "Turn Off", mr: "बंद करा" },
+  biometricSettingsTitle: {
+    en: "Face ID / Fingerprint",
+    mr: "Face ID / फिंगरप्रिंट",
+  },
+  biometricEnabledStatus: {
+    en: "Enabled on this device",
+    mr: "या डिव्हाइसवर सुरू आहे",
+  },
+  biometricNotEnabledStatus: {
+    en: "Not enabled on this device",
+    mr: "या डिव्हाइसवर सुरू नाही",
+  },
+  biometricNotSupported: {
+    en: "This browser or device doesn't support Face ID / Fingerprint unlock.",
+    mr: "हा ब्राउझर किंवा डिव्हाइस Face ID / फिंगरप्रिंट अनलॉकला समर्थन देत नाही.",
+  },
+  biometricRequiresSync: {
+    en: "Cloud sync isn't set up, so there's no PIN to unlock with biometrics.",
+    mr: "क्लाउड सिंक सेट केलेले नाही, त्यामुळे बायोमेट्रिक्सने अनलॉक करण्यासाठी कोणताही पिन नाही.",
+  },
+  biometricRegisterFailed: {
+    en: "Couldn't set up Face ID / Fingerprint. Please try again.",
+    mr: "Face ID / फिंगरप्रिंट सेट करता आले नाही. कृपया पुन्हा प्रयत्न करा.",
+  },
+  biometricAuthFailed: {
+    en: "Biometric unlock didn't work. Please use your PIN.",
+    mr: "बायोमेट्रिक अनलॉक झाले नाही. कृपया तुमचा पिन वापरा.",
+  },
+  pinMayBeOutdated: {
+    en: "Your saved PIN may be outdated. Please enter the current PIN.",
+    mr: "तुमचा जतन केलेला पिन जुना असू शकतो. कृपया सध्याचा पिन टाका.",
+  },
+  thisDeviceOnly: {
+    en: "This setting only applies to this device.",
+    mr: "ही सेटिंग फक्त या डिव्हाइससाठी लागू आहे.",
+  },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {

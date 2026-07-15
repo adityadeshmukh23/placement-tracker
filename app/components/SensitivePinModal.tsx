@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { Fingerprint } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 import { getRememberedPin } from "@/lib/SyncContext";
+import { useBiometricAvailable } from "@/lib/useBiometricAvailable";
+import { authenticateBiometric, hasBiometricRegistered } from "@/lib/webauthn";
 
 /**
  * Lightweight PIN re-entry gate for a single sensitive document — not a full
  * app logout/relogin. Verifies against the PIN already remembered on this
  * device (set by the original sign-in), so it works offline and doesn't
- * touch the app's actual session.
+ * touch the app's actual session. If biometrics are enabled on this device,
+ * a successful scan unlocks directly — no PIN value is involved, so it's
+ * unaffected by the shared PIN ever changing.
  */
 export function SensitivePinModal({
   open,
@@ -20,10 +25,15 @@ export function SensitivePinModal({
   onUnlock: () => void;
 }) {
   const { t } = useTranslation();
+  const biometricAvailable = useBiometricAvailable();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
+  const [biometricError, setBiometricError] = useState(false);
+  const [biometricBusy, setBiometricBusy] = useState(false);
 
   if (!open) return null;
+
+  const showBiometric = biometricAvailable && hasBiometricRegistered();
 
   function handleSubmit() {
     const remembered = getRememberedPin();
@@ -37,9 +47,23 @@ export function SensitivePinModal({
     }
   }
 
+  async function handleBiometricUnlock() {
+    if (biometricBusy) return;
+    setBiometricBusy(true);
+    setBiometricError(false);
+    const ok = await authenticateBiometric();
+    setBiometricBusy(false);
+    if (ok) {
+      onUnlock();
+    } else {
+      setBiometricError(true);
+    }
+  }
+
   function handleCancel() {
     setPin("");
     setError(false);
+    setBiometricError(false);
     onCancel();
   }
 
@@ -55,11 +79,33 @@ export function SensitivePinModal({
         <h3 className="text-lg font-semibold">{t("enterPinToView")}</h3>
         <p className="mt-1 text-base opacity-70">{t("sensitiveDocPinPrompt")}</p>
 
+        {showBiometric && (
+          <>
+            <button
+              type="button"
+              disabled={biometricBusy}
+              onClick={handleBiometricUnlock}
+              className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-lg border border-black/[.15] text-base font-semibold disabled:opacity-40 dark:border-white/[.2]"
+            >
+              <Fingerprint className="h-5 w-5" aria-hidden />
+              {biometricBusy ? t("loading") : t("biometricUnlock")}
+            </button>
+            {biometricError && (
+              <p className="mt-2 text-base text-red-600 dark:text-red-400">
+                {t("biometricAuthFailed")}
+              </p>
+            )}
+            <p className="mt-3 text-center text-sm font-medium uppercase tracking-wide opacity-50">
+              {t("usePinInstead")}
+            </p>
+          </>
+        )}
+
         <input
           type="password"
           inputMode="numeric"
           autoComplete="off"
-          autoFocus
+          autoFocus={!showBiometric}
           value={pin}
           onChange={(e) => {
             setPin(e.target.value);

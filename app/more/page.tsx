@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, FolderLock, KeyRound, Receipt } from "lucide-react";
+import { ChevronRight, Fingerprint, FolderLock, KeyRound, Receipt } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 import { BackButton } from "@/app/components/BackButton";
 import type { TranslationKey } from "@/lib/translations";
@@ -14,6 +14,7 @@ const MENU_ITEMS: {
   { href: "/other", labelKey: "otherRecords", Icon: Receipt },
   { href: "/documents", labelKey: "familyDocuments", Icon: FolderLock },
   { href: "/more/change-pin", labelKey: "changePin", Icon: KeyRound },
+  { href: "/more/biometric", labelKey: "biometricSettingsTitle", Icon: Fingerprint },
 ];
 
 export default function MorePage() {
