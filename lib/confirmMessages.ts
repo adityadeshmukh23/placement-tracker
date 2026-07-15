@@ -60,3 +60,10 @@ export function deleteOtherTransactionMessage(
   }
   return `Delete this ₹${amountLabel} record? This cannot be undone.`;
 }
+
+export function deleteDocumentMessage(title: string, language: Language): string {
+  if (language === "mr") {
+    return `"${title}" हटवायचे? यामुळे कागदपत्र आणि त्याची फाईल कायमची हटवली जाईल. हे पूर्ववत करता येणार नाही.`;
+  }
+  return `Delete "${title}"? This will permanently remove the document and its file. This cannot be undone.`;
+}

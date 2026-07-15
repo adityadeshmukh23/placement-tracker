@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IndianRupee, Plus, Receipt, Store } from "lucide-react";
+import { FileText, FolderLock, IndianRupee, Plus, Receipt, Store } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 
 export function Fab() {
@@ -14,7 +14,8 @@ export function Fab() {
   if (
     pathname.startsWith("/payments/new") ||
     pathname.startsWith("/shops/new") ||
-    pathname.startsWith("/other/new")
+    pathname.startsWith("/other/new") ||
+    pathname.startsWith("/documents/new")
   ) {
     return null;
   }
@@ -63,6 +64,22 @@ export function Fab() {
               >
                 <Receipt className="h-5 w-5 shrink-0" aria-hidden />
                 {t("otherTransaction")}
+              </Link>
+              <Link
+                href={`/documents/new?from=${encodeURIComponent(pathname)}`}
+                onClick={() => setOpen(false)}
+                className="flex h-14 items-center gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
+              >
+                <FileText className="h-5 w-5 shrink-0" aria-hidden />
+                {t("addDocument")}
+              </Link>
+              <Link
+                href="/documents"
+                onClick={() => setOpen(false)}
+                className="flex h-14 items-center gap-3 rounded-lg border border-black/[.12] px-4 text-base font-semibold dark:border-white/[.15]"
+              >
+                <FolderLock className="h-5 w-5 shrink-0" aria-hidden />
+                {t("openFamilyDocuments")}
               </Link>
               <button
                 type="button"

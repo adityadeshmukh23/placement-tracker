@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { db, updateDocument } from "@/lib/db";
-import { getDocumentSignedUrl } from "@/lib/storage";
+import { db, deleteDocument, updateDocument } from "@/lib/db";
+import { deleteDocumentFile, getDocumentSignedUrl } from "@/lib/storage";
 import { isSensitiveUnlocked, grantSensitiveUnlock } from "@/lib/sensitiveUnlock";
 import { useTranslation } from "@/lib/useTranslation";
 import { FormField, inputClass } from "@/app/components/FormField";
 import { BackButton } from "@/app/components/BackButton";
+import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { SensitivePinModal } from "@/app/components/SensitivePinModal";
+import { deleteDocumentMessage } from "@/lib/confirmMessages";
 import type {
   DocumentCategory,
   DocumentOwner,
@@ -72,6 +74,8 @@ export default function DocumentDetailPage({
   const [unlocked, setUnlocked] = useState(false);
   const [editing, setEditing] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Edit-mode form state.
   const [title, setTitle] = useState("");
@@ -146,6 +150,14 @@ export default function DocumentDetailPage({
   function handleUnlock() {
     grantSensitiveUnlock();
     setUnlocked(true);
+  }
+
+  async function handleConfirmDelete() {
+    if (!doc) return;
+    setDeleting(true);
+    await deleteDocumentFile(doc.fileUrl);
+    await deleteDocument(id);
+    router.push("/documents");
   }
 
   if (doc === undefined) {
@@ -350,6 +362,24 @@ export default function DocumentDetailPage({
       >
         {t("edit")}
       </button>
+
+      <button
+        type="button"
+        onClick={() => setConfirmDelete(true)}
+        className="flex h-12 items-center justify-center rounded-lg text-base font-semibold text-red-700 dark:text-red-400"
+      >
+        {t("delete")}
+      </button>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t("areYouSure")}
+        message={deleteDocumentMessage(doc.title, language)}
+        confirmLabel={t("delete")}
+        busy={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

@@ -204,6 +204,7 @@ export const translations = {
   viewDownload: { en: "View / Download", mr: "पहा / डाउनलोड करा" },
   hideAmounts: { en: "Hide amounts", mr: "रक्कम लपवा" },
   showAmounts: { en: "Show amounts", mr: "रक्कम दाखवा" },
+  openFamilyDocuments: { en: "Open Family Documents", mr: "कौटुंबिक कागदपत्रे उघडा" },
 } as const;
 
 export function translate(key: TranslationKey, lang: Language): string {
